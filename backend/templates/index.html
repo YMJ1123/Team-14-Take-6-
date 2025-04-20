@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take 6! 線上牛頭王</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .game-rules {
+            margin-top: 30px;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        .api-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        code {
+            background-color: #f8f8f8;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .room-list {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .rooms {
+            list-style: none;
+            padding: 0;
+        }
+        .rooms li {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+        .room-link {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .room-link:hover {
+            text-decoration: underline;
+        }
+        .create-room {
+            margin-top: 20px;
+        }
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 70%;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Take 6! Online 線上牛頭王</h1>
+        
+        <p>歡迎來到 Take 6! Online 遊戲平台。這是一個使用 Django 和 React 開發的線上多人即時卡牌遊戲。</p>
+        
+        <div class="room-list">
+            <h2>遊戲房間</h2>
+            {% if rooms %}
+                <ul class="rooms">
+                    {% for room in rooms %}
+                        <li>
+                            房間: <a href="{% url 'game_room' room_name=room.name %}" class="room-link">{{ room.name }}</a>
+                            <small>(創建於 {{ room.created_at|date:"Y-m-d H:i" }})</small>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>目前沒有活躍的遊戲房間。</p>
+            {% endif %}
+            
+            <div class="create-room">
+                <h3>創建新房間</h3>
+                <form method="post" action="{% url 'index' %}">
+                    {% csrf_token %}
+                    <input type="text" name="room_name" placeholder="房間名稱" required>
+                    <button type="submit">創建</button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="game-rules">
+            <h2>遊戲介紹</h2>
+            <p>Take 6! (德文: 6 Nimmt!) 是一款由Wolfgang Kramer設計的紙牌遊戲，支援2-10名玩家，最適合5-6人遊玩。</p>
+            
+            <h3>遊戲規則：</h3>
+            <ul>
+                <li>共104張牌（1-104號，每張牌有不同牛頭數量）</li>
+                <li>每局10回合，每位玩家持有10張牌</li>
+                <li>玩家每回合同時出一張牌</li>
+                <li>將牌依號碼大小順序放入桌面的4列牌中</li>
+                <li>最後牛頭數最少的玩家獲勝</li>
+            </ul>
+        </div>
+
+        <div class="api-section">
+            <h2>API 端點</h2>
+            <p>本遊戲平台提供以下 API 端點：</p>
+            <ul>
+                <li><code>/api/rooms/</code> - 管理遊戲房間</li>
+                <li><code>/api/games/</code> - 查詢遊戲資訊</li>
+                <li><code>/api/players/</code> - 查詢玩家資訊</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

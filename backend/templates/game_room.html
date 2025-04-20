@@ -1,0 +1,342 @@
+
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take 6! 遊戲房間</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #gameBoard {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .board-row {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: #fff;
+            min-height: 250px;
+        }
+        .card {
+            border: 1px solid #2c3e50;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 5px;
+            text-align: center;
+            background-color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .card.played {
+            background-color: #f9f9f9;
+        }
+        #playerHand {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        #playerHand .card {
+            cursor: pointer;
+        }
+        #playerHand .card:hover {
+            background-color: #f0f8ff;
+        }
+        #chatContainer {
+            margin-top: 20px;
+        }
+        #chatMessages {
+            border: 1px solid #ccc;
+            height: 200px;
+            overflow-y: scroll;
+            padding: 10px;
+            background-color: white;
+            margin-bottom: 10px;
+        }
+        #playerList {
+            border: 1px solid #ccc;
+            padding: 10px;
+            background-color: white;
+            margin-bottom: 20px;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        input[type="text"] {
+            padding: 10px;
+            margin-right: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Take 6! 線上牛頭王 - 遊戲房間: <span id="roomName"></span></h1>
+        
+        <div id="gameStatus">
+            <h2>遊戲狀態: <span id="statusText">等待玩家加入...</span></h2>
+            <div id="playerList">
+                <h3>玩家列表:</h3>
+                <ul id="players"></ul>
+            </div>
+        </div>
+
+        <div id="gameBoard"></div>
+        
+        <h2>你的手牌:</h2>
+        <div id="playerHand"></div>
+        
+        <div class="controls">
+            <button id="startGameBtn">開始遊戲</button>
+        </div>
+        
+        <div id="chatContainer">
+            <h2>聊天室:</h2>
+            <div id="chatMessages"></div>
+            <input type="text" id="chatInput" placeholder="輸入訊息..." />
+            <button id="sendMsgBtn">發送</button>
+        </div>
+    </div>
+
+    <script>
+        // 從 URL 取得房間名稱
+        const roomName = window.location.pathname.split('/').pop();
+        document.getElementById('roomName').textContent = roomName;
+        
+        // 建立 WebSocket 連接
+        const ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+        const socket = new WebSocket(
+            ws_scheme + '://' + window.location.host + '/ws/game/' + roomName + '/'
+        );
+        
+        // 當連接建立時
+        socket.onopen = function(e) {
+            console.log("WebSocket 連接已建立");
+            addChatMessage("系統", "已連接至遊戲伺服器");
+        };
+        
+        // 當收到訊息時
+        socket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            console.log("收到訊息:", data);
+            
+            switch(data.type) {
+                case 'connection_established':
+                    // 顯示連接成功訊息
+                    addChatMessage("系統", data.message);
+                    break;
+                
+                case 'room_info':
+                    // 更新玩家列表
+                    updatePlayerList(data.players);
+                    break;
+                
+                case 'user_notification':
+                    // 顯示用戶通知（有人加入/離開）
+                    addChatMessage("系統", data.message);
+                    
+                    // 若是加入/離開通知，更新玩家列表
+                    // 需要重新獲取玩家列表
+                    // 這部分可能需要後端額外發送 room_info 消息
+                    break;
+                
+                case 'chat_message':
+                    // 顯示聊天訊息
+                    addChatMessage(data.username, data.message);
+                    break;
+                
+                case 'game_started':
+                    // 更新遊戲狀態為已開始
+                    document.getElementById('statusText').textContent = "遊戲進行中";
+                    document.getElementById('startGameBtn').disabled = true;
+                    addChatMessage("系統", "遊戲開始！共有 " + data.player_count + " 名玩家");
+                    break;
+                
+                case 'deal_cards':
+                    // 顯示玩家手牌
+                    showPlayerHand(data.hand);
+                    break;
+                
+                case 'update_board':
+                    // 更新遊戲牌桌
+                    updateGameBoard(data.board);
+                    break;
+                
+                case 'card_played':
+                    // 顯示玩家出牌信息
+                    addChatMessage("系統", data.player_username + " 出了一張牌");
+                    
+                    // 如果是自己出的牌，從手牌中移除
+                    // 後端會處理這部分，但前端也可以同步更新 UI
+                    
+                    // 更新牌桌（這通常會在收到 update_board 時處理）
+                    break;
+                
+                case 'error':
+                    // 顯示錯誤訊息
+                    addChatMessage("系統", "錯誤: " + data.message);
+                    break;
+                
+                default:
+                    console.log("未知的訊息類型:", data.type);
+            }
+        };
+        
+        // 當連接關閉時
+        socket.onclose = function(e) {
+            console.error("WebSocket 連接已關閉");
+            addChatMessage("系統", "與伺服器的連接已關閉");
+        };
+        
+        // 當發生錯誤時
+        socket.onerror = function(e) {
+            console.error("WebSocket 錯誤:", e);
+            addChatMessage("系統", "連接錯誤，請重新整理頁面");
+        };
+        
+        // 開始遊戲按鈕事件
+        document.getElementById('startGameBtn').addEventListener('click', function() {
+            socket.send(JSON.stringify({
+                'type': 'start_game'
+            }));
+        });
+        
+        // 聊天發送按鈕事件
+        document.getElementById('sendMsgBtn').addEventListener('click', sendChatMessage);
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+        
+        // 發送聊天訊息
+        function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (message) {
+                socket.send(JSON.stringify({
+                    'type': 'chat_message',
+                    'message': message
+                }));
+                input.value = '';
+            }
+        }
+        
+        // 添加聊天訊息到聊天區
+        function addChatMessage(sender, message) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageElem = document.createElement('div');
+            messageElem.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            chatMessages.appendChild(messageElem);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // 更新玩家列表
+        function updatePlayerList(players) {
+            const playersList = document.getElementById('players');
+            playersList.innerHTML = '';
+            
+            players.forEach(player => {
+                const playerItem = document.createElement('li');
+                playerItem.textContent = `${player.username} (分數: ${player.score})`;
+                playersList.appendChild(playerItem);
+            });
+            
+            // 更新狀態文字
+            if (players.length < 2) {
+                document.getElementById('statusText').textContent = `等待更多玩家加入 (${players.length}/2)`;
+            } else {
+                document.getElementById('statusText').textContent = `可以開始遊戲 (${players.length} 名玩家)`;
+            }
+        }
+        
+        // 顯示玩家手牌
+        function showPlayerHand(cards) {
+            const handContainer = document.getElementById('playerHand');
+            handContainer.innerHTML = '';
+            
+            cards.forEach((card, index) => {
+                const cardElem = document.createElement('div');
+                cardElem.className = 'card';
+                cardElem.innerHTML = `
+                    <h3>${card.value}</h3>
+                    <p>牛頭數: ${card.bull_heads}</p>
+                `;
+                cardElem.dataset.index = index;
+                
+                // 添加出牌事件
+                cardElem.addEventListener('click', function() {
+                    playCard(index);
+                });
+                
+                handContainer.appendChild(cardElem);
+            });
+        }
+        
+        // 玩家出牌
+        function playCard(cardIndex) {
+            socket.send(JSON.stringify({
+                'type': 'play_card',
+                'card_idx': cardIndex
+            }));
+        }
+        
+        // 更新遊戲牌桌
+        function updateGameBoard(board) {
+            const boardContainer = document.getElementById('gameBoard');
+            boardContainer.innerHTML = '';
+            
+            board.forEach((row, rowIndex) => {
+                const rowElem = document.createElement('div');
+                rowElem.className = 'board-row';
+                rowElem.innerHTML = `<h3>第 ${rowIndex + 1} 列</h3>`;
+                
+                row.forEach(card => {
+                    const cardElem = document.createElement('div');
+                    cardElem.className = 'card played';
+                    cardElem.innerHTML = `
+                        <h3>${card.value}</h3>
+                        <p>牛頭數: ${card.bull_heads}</p>
+                    `;
+                    rowElem.appendChild(cardElem);
+                });
+                
+                boardContainer.appendChild(rowElem);
+            });
+        }
+    </script>
+</body>
+</html>
