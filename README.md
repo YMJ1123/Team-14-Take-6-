@@ -39,7 +39,7 @@ daphne -p 8000 take6.asgi:application
 
 (bash:)DJANGO_SETTINGS_MODULE=take6.settings daphne -p 8000 take6.asgi:application
 
-這個只支援http不支援WebSocket (python manage.py runserver)
+原本這個指令只支援http不支援WebSocket: python manage.py runserver
 
 ## 已經在本地開過之後
 conda activate final_team14
