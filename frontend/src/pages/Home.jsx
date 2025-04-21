@@ -9,27 +9,13 @@ const Home = () => {
   const [roomName, setRoomName] = useState(null); // 控制要不要切換
   
   return (
-    // <div className="container">
-    //   <h1>Take 6! Online 線上牛頭王</h1>
-    //   <p>歡迎來到 Take 6! Online 遊戲平台。</p>
-    //   <RoomList />
-    //   <CreateRoomForm />
-    //   <AboutGame />
-    //   <ApiDocs />
-    // </div>
     <div className="container">
-      {roomName ? (
-        <GameRoom roomName={roomName} />
-      ) : (
-        <>
-          <h1>Take 6! Online 線上牛頭王</h1>
-          <p>歡迎來到 Take 6! Online 遊戲平台。</p>
-          <RoomList />
-          <CreateRoomForm onCreate={(name) => setRoomName(name)} />
-          <AboutGame />
-          <ApiDocs />
-        </>
-      )}
+      <h1>Take 6! Online 線上牛頭王</h1>
+      <p>歡迎來到 Take 6! Online 遊戲平台。</p>
+      <RoomList />
+      <CreateRoomForm />
+      <AboutGame />
+      <ApiDocs />
     </div>
   );
 };

@@ -21,7 +21,6 @@ const CreateRoomForm = ({ onCreate }) => {
         console.log("房間建立成功", data);
         setRoomName("");
         navigate(`/game/${data.name}`); 
-        // onCreate(data.name); // 透過 props 通知 Home 切換頁面
       }).catch(err => {
         console.error("創建房間失敗", err);
         alert("建立房間失敗，請確認 Django server 是否有正確開啟 /api/rooms/");
