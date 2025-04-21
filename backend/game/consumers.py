@@ -4,8 +4,9 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from game_logic.core import GameState
 from game_logic.card import Card
-from .models import Room, GameSession, Player
-from django.contrib.auth.models import User
+# 以下兩行都要放在class裡每個真的要用的def裡面 才不會一開始就跑 出現錯誤
+# from .models import Room, GameSession, Player
+# from django.contrib.auth.models import User
 
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -305,6 +306,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     # 以下是資料庫操作函數
     @database_sync_to_async
     def join_room_db(self):
+        from .models import Room, GameSession, Player
         """將用戶加入到房間的資料庫記錄中"""
         try:
             room, created = Room.objects.get_or_create(name=self.room_name)
@@ -325,6 +327,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def get_room_players(self):
+        from .models import Room, GameSession, Player
         """獲取房間中的所有玩家"""
         try:
             room = Room.objects.get(name=self.room_name)
@@ -347,6 +350,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def check_user_is_admin(self):
+        from .models import Room, GameSession, Player
         """檢查用戶是否是房間管理員"""
         # 簡易實現: 假設第一個加入房間的玩家是房主
         try:
@@ -363,6 +367,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def get_active_game_session(self):
+        from .models import Room, GameSession
         """獲取活躍的遊戲會話"""
         try:
             room = Room.objects.get(name=self.room_name)
@@ -373,6 +378,7 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def get_player_index(self):
+        from .models import Room, GameSession, Player
         """獲取玩家在遊戲中的索引"""
         try:
             room = Room.objects.get(name=self.room_name)
