@@ -34,6 +34,7 @@ python manage.py makemigrations
 python manage.py migrate
 
 (powershell 分兩行跑:)$env:DJANGO_SETTINGS_MODULE = "take6.settings"
+
 daphne -p 8000 take6.asgi:application
 
 (bash:)DJANGO_SETTINGS_MODULE=take6.settings daphne -p 8000 take6.asgi:application
