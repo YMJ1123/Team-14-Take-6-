@@ -33,11 +33,11 @@ python manage.py makemigrations
 
 python manage.py migrate
 
-(powershell 分兩行跑:)$env:DJANGO_SETTINGS_MODULE = "take6.settings"
+(powershell 跑這兩行:)$env:DJANGO_SETTINGS_MODULE = "take6.settings"
 
 daphne -p 8000 take6.asgi:application
 
-(bash:)DJANGO_SETTINGS_MODULE=take6.settings daphne -p 8000 take6.asgi:application
+(bash 跑後面這一行就好:)DJANGO_SETTINGS_MODULE=take6.settings daphne -p 8000 take6.asgi:application
 
 原本這個指令只支援http不支援WebSocket: python manage.py runserver
 
@@ -58,9 +58,9 @@ cd backend
 
 daphne -p 8000 take6.asgi:application
 
-這個只支援http不支援WebSocket (python manage.py runserver)
-
 打開 127.0.0.1:8000 看畫面
+
+原本這個指令只支援http不支援WebSocket: python manage.py runserver
 
 ## 如果有安裝新套件
 如果是python相關套件(for django): 
@@ -72,6 +72,8 @@ daphne -p 8000 take6.asgi:application
 他應該會在安裝之後自動記錄到package.json裡面，不用自己更新
 
 ## 進度
+- 0420 ymj
+    - 用django完成前後端，可以創立遊戲間 
 - 0422 0007 hyc
     - 把vite+react加上去
     - 前端要在http://localhost:5173看
