@@ -1,0 +1,93 @@
+body {
+    font-family: 'Microsoft JhengHei', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+h1, h2 {
+    color: #2c3e50;
+}
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+#gameBoard {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.board-row {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #fff;
+    min-height: 250px;
+}
+.card {
+    border: 1px solid #2c3e50;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px;
+    text-align: center;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.card.played {
+    background-color: #f9f9f9;
+}
+#playerHand {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+#playerHand .card {
+    cursor: pointer;
+}
+#playerHand .card:hover {
+    background-color: #f0f8ff;
+}
+#chatContainer {
+    margin-top: 20px;
+}
+#chatMessages {
+    border: 1px solid #ccc;
+    height: 200px;
+    overflow-y: scroll;
+    padding: 10px;
+    background-color: white;
+    margin-bottom: 10px;
+}
+#playerList {
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: white;
+    margin-bottom: 20px;
+}
+.controls {
+    margin-top: 20px;
+}
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #2980b9;
+}
+input[type="text"] {
+    padding: 10px;
+    margin-right: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 300px;
+}
