@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import "../styles/game_room.css";
+import Card from "./Card";
+import "../styles/player_hand.css";
 
 const PlayerHand = ({ socket }) => {
   const [hand, setHand] = useState([]);
+  const [selectedCard, setSelectedCard] = useState(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -11,6 +13,7 @@ const PlayerHand = ({ socket }) => {
       const data = JSON.parse(e.data);
       if (data.type === "deal_cards") {
         setHand(data.hand);
+        setSelectedCard(null); // 重置選擇的牌
       }
     };
 
@@ -22,29 +25,48 @@ const PlayerHand = ({ socket }) => {
   }, [socket]);
 
   const playCard = (cardIndex) => {
-    socket.send(JSON.stringify({
-      type: "play_card",
-      card_idx: cardIndex,
-    }));
+    if (selectedCard === cardIndex) {
+      // 如果已選擇，則確認出牌
+      socket.send(JSON.stringify({
+        type: "play_card",
+        card_idx: cardIndex,
+      }));
+      setSelectedCard(null);
+    } else {
+      // 選擇牌
+      setSelectedCard(cardIndex);
+    }
   };
 
   return (
-    <>
+    <div className="player-hand-container">
       <h2>你的手牌:</h2>
-      <div id="playerHand">
+      <div className="player-hand">
         {hand.map((card, index) => (
-          <div
-            className="card"
-            key={index}
-            onClick={() => playCard(index)}
-            style={{ cursor: "pointer" }}
+          <div 
+            key={index} 
+            className={`hand-card ${selectedCard === index ? 'selected' : ''}`}
           >
-            <h3>{card.value}</h3>
-            <p>牛頭數: {card.bull_heads}</p>
+            <Card
+              value={card.value}
+              bullHeads={card.bull_heads}
+              isPlayed={false}
+              onClick={() => playCard(index)}
+            />
           </div>
         ))}
       </div>
-    </>
+      {selectedCard !== null && (
+        <div className="card-action">
+          <button onClick={() => playCard(selectedCard)} className="confirm-play-btn">
+            確認出牌
+          </button>
+          <button onClick={() => setSelectedCard(null)} className="cancel-btn">
+            取消
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 

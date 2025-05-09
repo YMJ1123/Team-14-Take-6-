@@ -1,0 +1,46 @@
+.remaining-cards-container {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.remaining-cards-container h2 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.all-cards-display {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 15px auto;
+  max-width: 900px;
+  background-color: rgba(44, 62, 80, 0.05);
+  padding: 20px 10px;
+  border-radius: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+}
+
+.card-in-display {
+  transition: transform 0.2s ease, z-index 0.2s;
+  position: relative;
+}
+
+.card-in-display:hover {
+  transform: translateY(-10px) rotate(0deg) !important;
+  z-index: 1000 !important;
+}
+
+.card-distribution-info {
+  margin-top: 15px;
+  font-size: 0.9rem;
+  color: #666;
+  font-style: italic;
+}

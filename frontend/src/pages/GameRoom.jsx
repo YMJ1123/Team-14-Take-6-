@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import GameStatus from '../components/GameStatus';
 import GameBoard from '../components/GameBoard';
-import PlayerHand from '../components/PlayerHand';
 import ChatBox from '../components/ChatBox';
+import Scoreboard from '../components/Scoreboard';
+import RemainingCards from '../components/RemainingCards';
 import '../styles/game_room.css';
 
 const GameRoom = () => {
@@ -13,11 +14,17 @@ const GameRoom = () => {
   const [connected, setConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
   const [roomId, setRoomId] = useState(null);
+  const [isPrepared, setIsPrepared] = useState(false);
+  const [isGameStarted, setIsGameStarted] = useState(false);
+  const [playerCount, setPlayerCount] = useState(0);
+  const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  const backgroundMusicRef = useRef(null);
+  const gameStartSoundRef = useRef(null);
 
   useEffect(() => {
     if (!roomName) return;
     
-    // 獲取房間 ID 用於刪除操作
+    // Get room ID for delete operation
     fetch(`http://127.0.0.1:8000/api/rooms/?name=${roomName}`)
       .then(res => res.json())
       .then(data => {
@@ -25,33 +32,59 @@ const GameRoom = () => {
           setRoomId(data[0].id);
         }
       })
-      .catch(err => console.error("獲取房間ID失敗:", err));
+      .catch(err => console.error("Failed to get room ID:", err));
     
-    // WebSocket 連接
+    // WebSocket connection
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = '127.0.0.1:8000';
     const wsUrl = `${protocol}//${host}/ws/game/${roomName}/`;
     
-    console.log(`嘗試連接WebSocket: ${wsUrl}`);
+    console.log(`Attempting to connect to WebSocket: ${wsUrl}`);
     
     const ws = new WebSocket(wsUrl);
     
     ws.onopen = () => {
-      console.log('WebSocket連接成功');
+      console.log('WebSocket connection successful');
       setConnected(true);
       setConnectionError(null);
+      
+      // Auto-play background music
+      if (backgroundMusicRef.current) {
+        backgroundMusicRef.current.volume = 0.3;
+        backgroundMusicRef.current.loop = true;
+        
+        const playPromise = backgroundMusicRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            setIsMusicPlaying(true);
+          }).catch(error => {
+            console.log("Autoplay blocked, requires user interaction:", error);
+            setIsMusicPlaying(false);
+          });
+        }
+      }
     };
     
     ws.onerror = (error) => {
-      console.error('WebSocket錯誤:', error);
-      setConnectionError('連接到伺服器時發生錯誤，請確認後端伺服器是否已使用daphne正確啟動');
+      console.error('WebSocket error:', error);
+      setConnectionError('Error connecting to server, please check if the backend server is running correctly with daphne');
     };
     
     ws.onclose = (event) => {
-      console.log(`WebSocket連接已關閉: 代碼 ${event.code}, 原因: ${event.reason}`);
+      console.log(`WebSocket connection closed: Code ${event.code}, Reason: ${event.reason}`);
       setConnected(false);
       if (!connectionError) {
-        setConnectionError('與伺服器的連接已關閉，請刷新頁面重試');
+        setConnectionError('Connection to server closed, please refresh to try again');
+      }
+    };
+    
+    ws.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.type === "game_started") {
+        setIsGameStarted(true);
+      }
+      if (data.type === "room_info" && data.players) {
+        setPlayerCount(data.players.length);
       }
     };
     
@@ -61,31 +94,93 @@ const GameRoom = () => {
       if (ws && ws.readyState <= 1) {
         ws.close();
       }
+      
+      // Stop all music when leaving page
+      if (backgroundMusicRef.current) {
+        backgroundMusicRef.current.pause();
+        backgroundMusicRef.current.currentTime = 0;
+      }
+      
+      if (gameStartSoundRef.current) {
+        gameStartSoundRef.current.pause();
+        gameStartSoundRef.current.currentTime = 0;
+      }
     };
   }, [roomName]);
 
   const handleDeleteRoom = () => {
     if (!roomId) {
-      alert("無法獲取房間ID，刪除失敗");
+      alert("Unable to get room ID, deletion failed");
       return;
     }
 
-    if (confirm(`確定要刪除房間 "${roomName}" 嗎？`)) {
+    if (confirm(`Are you sure you want to delete room "${roomName}"?`)) {
       fetch(`http://127.0.0.1:8000/api/rooms/${roomId}/`, {
         method: 'DELETE',
       })
         .then(res => {
           if (res.ok) {
-            alert("房間已成功刪除");
+            alert("Room successfully deleted");
             navigate('/');
           } else {
-            throw new Error("刪除房間失敗");
+            throw new Error("Failed to delete room");
           }
         })
         .catch(err => {
-          console.error("刪除房間時出錯:", err);
-          alert("刪除房間失敗，請稍後再試");
+          console.error("Error deleting room:", err);
+          alert("Failed to delete room, please try again later");
         });
+    }
+  };
+
+  const handlePrepare = () => {
+    setIsPrepared(true);
+    
+    // Stop background music and switch to game start music
+    if (backgroundMusicRef.current) {
+      backgroundMusicRef.current.pause();
+      backgroundMusicRef.current.currentTime = 0;
+    }
+    
+    // Play game start music on loop
+    if (gameStartSoundRef.current) {
+      gameStartSoundRef.current.volume = 0.5;
+      gameStartSoundRef.current.loop = true;
+      gameStartSoundRef.current.play().then(() => {
+        setIsMusicPlaying(true);
+      }).catch(error => {
+        console.log("Failed to play audio:", error);
+        setIsMusicPlaying(false);
+      });
+    }
+  };
+
+  const handleStartGame = () => {
+    socket?.send(JSON.stringify({ type: "start_game" }));
+  };
+
+  const toggleMusic = () => {
+    if (isMusicPlaying) {
+      // Stop music if playing
+      if (isPrepared && gameStartSoundRef.current) {
+        gameStartSoundRef.current.pause();
+        gameStartSoundRef.current.currentTime = 0;
+      } else if (backgroundMusicRef.current) {
+        backgroundMusicRef.current.pause();
+        backgroundMusicRef.current.currentTime = 0;
+      }
+      setIsMusicPlaying(false);
+    } else {
+      // Play music if stopped
+      if (isPrepared && gameStartSoundRef.current) {
+        gameStartSoundRef.current.play().then(() => {
+          setIsMusicPlaying(true);
+        });
+      } else if (backgroundMusicRef.current) {
+        backgroundMusicRef.current.play().then(() => {
+          setIsMusicPlaying(true);
+        });
+      }
     }
   };
 
@@ -94,24 +189,59 @@ const GameRoom = () => {
       <div className="room-header">
         <h1>Take 6! 線上牛頭王 - 遊戲房間: {roomName}</h1>
         <div className="room-actions">
+          <button onClick={toggleMusic} className={isMusicPlaying ? "music-btn playing" : "music-btn"}>
+            {isMusicPlaying ? "停止音樂" : "播放音樂"}
+          </button>
           <button onClick={() => navigate('/')} className="back-btn">返回大廳</button>
           <button onClick={handleDeleteRoom} className="delete-room-btn">刪除房間</button>
         </div>
       </div>
       
+      {/* 音頻元素 */}
+      <audio ref={backgroundMusicRef} src="/sounds/background-music.mp3"></audio>
+      <audio ref={gameStartSoundRef} src="/sounds/game-start.mp3"></audio>
+      
       {connected ? (
         <>
           <GameStatus socket={socket} />
-          <GameBoard socket={socket} />
-          <PlayerHand socket={socket} />
+          
+          {isPrepared && (
+            <>
+              <Scoreboard socket={socket} />
+              
+              {/* 整合我的手牌到遊戲牌桌內 */}
+              <GameBoard 
+                socket={socket} 
+                isPrepared={isPrepared} 
+                isGameStarted={isGameStarted} 
+              />
+              
+              {/* 剩餘牌數顯示 */}
+              {!isGameStarted && <RemainingCards 
+                playerCount={playerCount} 
+                isGameStarted={isGameStarted}
+              />}
+            </>
+          )}
+          
           <div className="game-controls">
-            <button 
-              onClick={() => socket?.send(JSON.stringify({ type: "start_game" }))}
-              className="start-game-btn"
-            >
-              開始遊戲
-            </button>
+            {!isPrepared ? (
+              <button 
+                onClick={handlePrepare}
+                className="prepare-btn"
+              >
+                準備
+              </button>
+            ) : !isGameStarted ? (
+              <button 
+                onClick={handleStartGame}
+                className="start-game-btn"
+              >
+                遊戲開始
+              </button>
+            ) : null}
           </div>
+          
           <ChatBox socket={socket} />
         </>
       ) : (

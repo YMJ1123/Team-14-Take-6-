@@ -1,0 +1,54 @@
+.player-hand-container {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.player-hand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.hand-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hand-card.selected {
+  transform: translateY(-10px);
+  box-shadow: 0 0 15px rgba(52, 152, 219, 0.7);
+}
+
+.card-action {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.confirm-play-btn {
+  padding: 8px 15px;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  padding: 8px 15px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-play-btn:hover {
+  background-color: #27ae60;
+}
+
+.cancel-btn:hover {
+  background-color: #c0392b;
+}
