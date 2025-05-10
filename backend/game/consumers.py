@@ -102,33 +102,76 @@ class GameConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        data = json.loads(text_data)
-        message_type = data.get('type')
-        
-        # 獲取用戶名（登入用戶或訪客）
-        username = getattr(self, 'username', None) or (self.user.username if hasattr(self, 'user') and self.user.is_authenticated else None)
-        
-        if message_type == 'start_game':
-            # 開始遊戲
-            await self.start_game()
-        
-        elif message_type == 'play_card':
-            # 玩家出牌
-            card_idx = data.get('card_idx')
-            await self.handle_play_card(card_idx)
-        
-        elif message_type == 'chat_message':
-            message = data.get('message')
+        try:
+            data = json.loads(text_data)
+            message_type = data.get('type')
             
-            # 發送給群組時包含用戶名
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'chat_message',
-                    'message': message,
-                    'username': username
-                }
-            )
+            # 獲取用戶名（登入用戶或訪客）
+            username = getattr(self, 'username', None) or (self.user.username if hasattr(self, 'user') and self.user.is_authenticated else None)
+            
+            if message_type == 'request_room_info':
+                # 處理請求房間信息的消息
+                players = await self.get_room_players()
+                await self.send(text_data=json.dumps({
+                    'type': 'room_info',
+                    'players': players
+                }))
+                return
+
+            if message_type == 'start_game':
+                # 廣播遊戲開始消息給所有玩家
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'game_started',
+                        'message': '遊戲開始！',
+                        'username': username
+                    }
+                )
+                return
+
+            if message_type == 'player_ready':
+                is_ready = data.get('is_ready', False)
+                if username:
+                    await self._update_player_ready_status_db(username, is_ready)
+                else:
+                    print("Error: username not found for player_ready message")
+
+                print(f"Player {username} is now {'ready' if is_ready else 'not ready'}")
+
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'player_ready_state',
+                        'username': username,
+                        'is_ready': is_ready
+                    }
+                )
+                return
+            
+            elif message_type == 'play_card':
+                # 玩家出牌
+                card_idx = data.get('card_idx')
+                await self.handle_play_card(card_idx)
+            
+            elif message_type == 'chat_message':
+                message = data.get('message')
+                
+                # 發送給群組時包含用戶名
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message': message,
+                        'username': username
+                    }
+                )
+
+        except Exception as e:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'處理消息時出錯: {str(e)}'
+            }))
 
     async def chat_message(self, event):
         # 確保消息中包含用戶名
@@ -214,10 +257,11 @@ class GameConsumer(AsyncWebsocketConsumer):
         )
     
     async def game_started(self, event):
+        """處理遊戲開始事件"""
         await self.send(text_data=json.dumps({
             'type': 'game_started',
-            'player_count': event['player_count'],
-            'players': event['players']
+            'message': event['message'],
+            'username': event['username']
         }))
     
     async def deal_cards(self, event):
@@ -307,6 +351,35 @@ class GameConsumer(AsyncWebsocketConsumer):
             'room': event['room']
         }))
     
+    async def player_ready_state(self, event):
+        """Handles the player_ready_state message from the group and sends it to the client."""
+        await self.send(text_data=json.dumps({
+            'type': 'player_ready_state',
+            'username': event['username'],
+            'is_ready': event['is_ready']
+        }))
+    
+    @database_sync_to_async
+    def _update_player_ready_status_db(self, username, is_ready):
+        from .models import Player, User # GameSession, Room 已經在其他地方導入
+        try:
+            user = User.objects.get(username=username)
+            # 假設一個房間同一用戶只有一個活躍的 Player 實例
+            player_obj = Player.objects.get(user=user, game__room__name=self.room_name, game__active=True)
+            player_obj.is_ready = is_ready
+            player_obj.save()
+            print(f"Database: Player {username} ready status updated to {is_ready}")
+            return True
+        except User.DoesNotExist:
+            print(f"Database Error: User {username} not found.")
+            return False
+        except Player.DoesNotExist:
+            print(f"Database Error: Player {username} not found in active game session for room {self.room_name}.")
+            return False
+        except Exception as e:
+            print(f"Database Error: Error updating player ready status for {username}: {e}")
+            return False
+
     @database_sync_to_async
     def join_room_db(self):
         from .models import Room, GameSession, Player
@@ -422,14 +495,19 @@ class GameConsumer(AsyncWebsocketConsumer):
             
             # 格式化玩家數據
             result = []
-            for player in players:
+            for player_obj in players: # Renamed from player to player_obj to avoid conflict
                 result.append({
-                    'username': player.user.username,
-                    'score': player.score or 0,
-                    'is_guest': player.user.username.startswith('訪客_')
+                    'id': player_obj.user.id, # 通常前端也需要id
+                    'username': player_obj.user.username,
+                    'score': player_obj.score or 0,
+                    'is_guest': player_obj.user.username.startswith('訪客_'),
+                    'is_ready': player_obj.is_ready  # 包含 is_ready 狀態
                 })
             
             return result
+        except Room.DoesNotExist:
+            print(f"Error getting room players: Room {self.room_name} does not exist.")
+            return []
         except Exception as e:
             print(f"獲取房間玩家時出錯: {str(e)}")
             return []

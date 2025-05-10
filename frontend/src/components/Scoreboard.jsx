@@ -5,11 +5,22 @@ const Scoreboard = ({ socket }) => {
   const [players, setPlayers] = useState([]);
   const [currentUser, setCurrentUser] = useState("");
 
+  // 請求更新房間信息的函數
+  const requestRoomInfo = () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "request_room_info" }));
+    }
+  };
+
   useEffect(() => {
     if (!socket) return;
 
+    // 設置定時更新（每5秒更新一次）
+    const updateInterval = setInterval(requestRoomInfo, 5000);
+
     const handleMessage = (e) => {
       const data = JSON.parse(e.data);
+      console.log("Scoreboard received message:", data);
       
       if (data.type === "connection_established") {
         // 從連接訊息中獲取自己的用戶名
@@ -17,18 +28,28 @@ const Scoreboard = ({ socket }) => {
         if (match && match[1]) {
           setCurrentUser(match[1].trim());
         }
+        // 連接建立後立即請求房間信息
+        requestRoomInfo();
       }
       
       if (data.type === "room_info") {
+        console.log("Updating players list:", data.players);
         if (data.players && data.players.length > 0) {
-          // 如果是準備狀態，所有玩家都應被視為已準備
           const updatedPlayers = data.players.map(player => ({
             ...player,
-            // 根據玩家的準備狀態或賦予默認值
-            is_ready: player.is_ready !== undefined ? player.is_ready : true
+            // 新玩家默認為未準備狀態
+            is_ready: player.is_ready === true ? true : false,
+            score: player.score || 0
           }));
           setPlayers(updatedPlayers);
+        } else {
+          setPlayers([]);
         }
+      }
+      
+      if (data.type === "user_notification") {
+        // 當有玩家加入或離開時，立即請求更新房間信息
+        requestRoomInfo();
       }
       
       if (data.type === "player_ready_state") {
@@ -59,12 +80,11 @@ const Scoreboard = ({ socket }) => {
     socket.addEventListener("message", handleMessage);
     
     // 如果沒有獲取到房間信息，主動請求一次
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type: "request_room_info" }));
-    }
+    requestRoomInfo();
     
     return () => {
       socket.removeEventListener("message", handleMessage);
+      clearInterval(updateInterval);
     };
   }, [socket]);
 

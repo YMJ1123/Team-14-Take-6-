@@ -20,6 +20,8 @@ const GameRoom = () => {
   const [isMusicPlaying, setIsMusicPlaying] = useState(true);
   const backgroundMusicRef = useRef(null);
   const gameStartSoundRef = useRef(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     if (!roomName) return;
@@ -78,6 +80,7 @@ const GameRoom = () => {
       }
     };
     
+    // 可能要改變IsGameStarted的狀態 hyc
     ws.onmessage = (e) => {
       const data = JSON.parse(e.data);
       if (data.type === "game_started") {
@@ -134,7 +137,12 @@ const GameRoom = () => {
   };
 
   const handlePrepare = () => {
-    setIsPrepared(true);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "player_ready", is_ready: true }));
+      setIsPrepared(true);
+    } else {
+      console.error("WebSocket is not connected.");
+    }
     
     // Stop background music and switch to game start music
     if (backgroundMusicRef.current) {
@@ -156,8 +164,50 @@ const GameRoom = () => {
   };
 
   const handleStartGame = () => {
-    socket?.send(JSON.stringify({ type: "start_game" }));
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "start_game" }));
+    }
   };
+
+  // 新增遊戲開始的處理函數
+  const handleGameStarted = (data) => {
+    console.log("Game started with data:", data);
+    setIsGameStarted(true);
+    // TODO: 在這裡添加遊戲開始後的初始化邏輯
+  };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessage = (e) => {
+      const data = JSON.parse(e.data);
+      console.log("GameRoom received message:", data);
+
+      if (data.type === "connection_established") {
+        const match = data.message.match(/歡迎\s+(.+?)!/);
+        if (match && match[1]) {
+          setCurrentUser(match[1].trim());
+        }
+      }
+
+      if (data.type === "user_notification") {
+        setMessages(prev => [...prev, { username: data.username, message: data.message }]);
+      }
+
+      if (data.type === "chat_message") {
+        setMessages(prev => [...prev, { username: data.username, message: data.message }]);
+      }
+
+      if (data.type === "game_started") {
+        handleGameStarted(data);
+      }
+    };
+
+    socket.addEventListener("message", handleMessage);
+    return () => {
+      socket.removeEventListener("message", handleMessage);
+    };
+  }, [socket]);
 
   const toggleMusic = () => {
     if (isMusicPlaying) {

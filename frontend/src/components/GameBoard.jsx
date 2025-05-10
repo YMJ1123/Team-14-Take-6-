@@ -133,7 +133,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         <div className="my-hand-row">
           <div className="row-header">我的手牌</div>
           <div className="my-hand-container">
-            {isGameStarted && hand.length > 0 ? (
+            {isGameStarted && hand.length > 0 ? ( /*這邊需要紀錄hand.length hyc */
               <div className="player-hand">
                 {hand.map((card, index) => (
                   <div 
