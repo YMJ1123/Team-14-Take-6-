@@ -91,6 +91,9 @@ daphne -p 8000 take6.asgi:application
     - Run python backend/manage.py migrate
 
 ## 進度
+- 0512 楊&黃
+    - 解決用戶"已準備"、"未準備"的同步問題
+    - 順利發牌給用戶和桌面上的初始四張牌
 
 - 0509 AndyChen
     - 牌設計（顯示於剩餘牌數區）
