@@ -1,58 +1,69 @@
 import json
 import asyncio
 import uuid
+import random
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from game_logic.core import GameState
 from game_logic.card import Card
+from .game_room import GameRoom  # 導入 GameRoom 類
 
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f'game_{self.room_name}'
-        self.user = self.scope['user']
-
+        self.user = self.scope["user"]
+        
+        await self.accept()
+        
+        # 如果用戶未登入，創建臨時訪客用戶
+        if not self.user.is_authenticated:
+            guest_id = ''.join(random.choices('0123456789abcdef', k=8))
+            self.username = f'訪客_{guest_id}'
+            
+            # 創建臨時訪客用戶並將其保存為 self.user
+            await self.create_guest_user(self.username)
+            
+            print(f"創建訪客: {self.username}")
+        else:
+            self.username = self.user.username
+            print(f"已登入用戶: {self.username}")
+        
+        # 獲取或創建遊戲房間，並將玩家添加到房間
+        self.game_room = GameRoom.get_room(self.room_name)
+        self.game_room.add_player(self.user.id)
+        
+        # 加入房間
+        room_exists = await self.add_player_to_room()
+        if not room_exists:
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': '房間不存在'
+            }))
+            return
+        
         # 加入房間群組
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
         )
-
-        await self.accept()
         
-        # 處理用戶連接
-        if self.user.is_authenticated:
-            # 已登入用戶
-            self.username = self.user.username
-            await self.send(text_data=json.dumps({
-                'type': 'connection_established',
-                'message': f'歡迎 {self.username}! 已成功連接至遊戲伺服器'
-            }))
-            
-            # 將登入用戶加入房間
-            await self.join_room_db()
-        else:
-            # 訪客用戶生成臨時用戶名
-            self.temp_username = f"訪客_{uuid.uuid4().hex[:8]}"
-            self.username = self.temp_username
-            
-            await self.send(text_data=json.dumps({
-                'type': 'connection_established',
-                'message': f'歡迎 {self.username}! 已成功連接至遊戲伺服器（訪客模式）'
-            }))
-            
-            # 將訪客加入房間（重要：確保訪客也被添加到玩家列表）
-            await self.join_guest_to_room()
-        
-        # 通知其他人新用戶已連接
+        # 通知其他用戶有新人加入
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'user_notification',
-                'message': f'{self.username} 已加入遊戲',
-                'username': self.username
+                'message': f'{self.username} 加入了遊戲',
+                'username': "系統"
             }
         )
+        
+        # 發送身份確認訊息給剛連接的客戶端
+        await self.send(text_data=json.dumps({
+            'type': 'connection_established',
+            'playerId': self.user.id,
+            'message': f'歡迎 {self.username}!'
+        }))
         
         # 更新房間玩家列表
         players = await self.get_room_players()
@@ -70,6 +81,13 @@ class GameConsumer(AsyncWebsocketConsumer):
         username = getattr(self, 'username', None) or (
             self.user.username if hasattr(self, 'user') and self.user.is_authenticated else "未知用戶"
         )
+        
+        # 從共享房間中移除玩家
+        if hasattr(self, 'game_room'):
+            self.game_room.remove_player(self.user.id)
+            # 如果房間為空，可以考慮移除房間
+            if self.game_room.get_player_count() == 0:
+                GameRoom.remove_room(self.room_name)
         
         # 移除離開的玩家（包括訪客）
         await self.remove_player_from_room()
@@ -117,6 +135,54 @@ class GameConsumer(AsyncWebsocketConsumer):
                     'players': players
                 }))
                 return
+                
+            # 處理玩家請求卡牌的消息
+            if message_type == 'request_cards':
+                # 檢查遊戲是否已經開始
+                if not self.game_room.has_game_state():
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': '遊戲尚未開始'
+                    }))
+                    return
+                    
+                # 獲取玩家在遊戲中的索引 (從 get_player_index 獲取，與資料庫玩家順序一致)
+                player_idx = await self.get_player_index()
+                if player_idx is None:
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': '你不是此遊戲的玩家'
+                    }))
+                    return
+                    
+                # 將前端傳來的 player_index 作為參考，但實際使用後端資料庫的順序
+                # 用於比較/檢查，但使用後端資料的 player_idx 作為真實資料來源
+                requested_idx = data.get('player_index', -1)
+                if player_idx != requested_idx:
+                    print(f"警告: 玩家要求的索引 ({requested_idx}) 與伺服器計算的索引 ({player_idx}) 不一致")
+                    
+                # 獲取該玩家的手牌（從共享的 GameState 中獲取）
+                game_state = self.game_room.game_state
+                if player_idx < len(game_state.player_hands):
+                    hand = game_state.player_hands[player_idx]
+                    # 轉換成可序列化的格式
+                    hand_data = [{'value': card.value, 'bull_heads': card.bull_heads} for card in hand]
+                    
+                    # 直接向請求的玩家發送手牌
+                    await self.send(text_data=json.dumps({
+                        'type': 'cards_assigned',
+                        'cards': hand_data
+                    }))
+                    
+                    # 記錄發牌日誌
+                    print(f"已向玩家 {username} (索引 {player_idx}) 發送手牌: {[card['value'] for card in hand_data]}")
+                    return
+                else:
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': '無法找到您的手牌'
+                    }))
+                    return
 
             if message_type == 'start_game':
                 # 廣播遊戲開始消息給所有玩家
@@ -128,6 +194,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                         'username': username
                     }
                 )
+                
+                # 在這裡啟動遊戲，創建 game_state
+                await self.start_game()
                 return
 
             if message_type == 'player_ready':
@@ -211,36 +280,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             }))
             return
         
-        # 初始化遊戲狀態
-        game_state = GameState(player_count)
-        
-        # 將遊戲狀態儲存到 channel layer 供所有客戶端使用
-        self.game_state = game_state
-        
-        # 通知所有玩家遊戲已開始
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'game_started',
-                'player_count': player_count,
-                'players': players
-            }
-        )
-        
-        # 分發手牌給各個玩家
-        for idx, player in enumerate(players):
-            # 獲取該玩家的 channel name (實際實現可能需要額外步驟)
-            user_id = player['id']
-            hand = [{'value': card.value, 'bull_heads': card.bull_heads} for card in game_state.player_hands[idx]]
-            
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'deal_cards',
-                    'hand': hand,
-                    'user_id': user_id
-                }
-            )
+        # 使用共享的 GameRoom 初始化遊戲狀態
+        game_state = self.game_room.initialize_game_state(player_count)
         
         # 發送初始牌桌狀態給所有玩家
         initial_board = []
@@ -279,7 +320,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         }))
     
     async def handle_play_card(self, card_idx):
-        if not hasattr(self, 'game_state'):
+        # 檢查遊戲是否已經開始
+        if not self.game_room.has_game_state():
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': '遊戲尚未開始'
@@ -295,9 +337,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             }))
             return
         
+        # 獲取共享的 GameState 實例
+        game_state = self.game_room.game_state
+        
         # 執行遊戲邏輯處理出牌
         try:
-            result = self.game_state.play_card(player_idx, card_idx)
+            result = game_state.play_card(player_idx, card_idx)
             
             # 通知所有玩家有人出牌
             await self.channel_layer.group_send(
@@ -313,7 +358,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             
             # 更新牌桌
             updated_board = []
-            for row in self.game_state.board_rows:
+            for row in game_state.board_rows:
                 row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
                 updated_board.append(row_cards)
             
@@ -361,7 +406,8 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     @database_sync_to_async
     def _update_player_ready_status_db(self, username, is_ready):
-        from .models import Player, User # GameSession, Room 已經在其他地方導入
+        from .models import Player # GameSession, Room 已經在其他地方導入
+        from django.contrib.auth.models import User
         try:
             user = User.objects.get(username=username)
             # 假設一個房間同一用戶只有一個活躍的 Player 實例
@@ -381,7 +427,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             return False
 
     @database_sync_to_async
-    def join_room_db(self):
+    def add_player_to_room(self):
         from .models import Room, GameSession, Player
         """將用戶加入到房間的資料庫記錄中"""
         try:
@@ -402,45 +448,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             return False
 
     @database_sync_to_async
-    def join_guest_to_room(self):
-        from .models import Room, GameSession, Player
-        from django.contrib.auth.models import User
-        
-        try:
-            # 為訪客創建臨時用戶記錄
-            # 注意：實際生產環境中可能需要不同的處理方式
-            temp_user, created = User.objects.get_or_create(
-                username=self.temp_username,
-                defaults={
-                    'password': uuid.uuid4().hex,  # 生成隨機密碼
-                    'is_active': False  # 訪客用戶不可登入
-                }
-            )
-            
-            # 記錄訪客用戶ID便於後續操作
-            self.guest_user_id = temp_user.id
-            
-            # 獲取或創建房間
-            room, _ = Room.objects.get_or_create(name=self.room_name)
-            
-            # 獲取活躍的遊戲會話，如果沒有則創建
-            game_session = GameSession.objects.filter(room=room, active=True).first()
-            if not game_session:
-                game_session = GameSession.objects.create(room=room, active=True)
-            
-            # 將訪客加入玩家列表
-            player, created = Player.objects.get_or_create(
-                user=temp_user,
-                game=game_session,
-                defaults={'score': 0}
-            )
-            
-            return True
-        except Exception as e:
-            print(f"加入訪客到房間時出錯: {str(e)}")
-            return False
-
-    @database_sync_to_async
     def remove_player_from_room(self):
         from .models import Room, GameSession, Player
         from django.contrib.auth.models import User
@@ -458,19 +465,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             if self.user.is_authenticated:
                 # 登入用戶
                 user = self.user
-            elif hasattr(self, 'guest_user_id'):
-                # 訪客用戶
-                user = User.objects.get(id=self.guest_user_id)
             else:
                 # 無法確定用戶，中斷操作
                 return False
             
             # 移除玩家
             Player.objects.filter(user=user, game=game_session).delete()
-            
-            # 如果是訪客，還可以考慮刪除臨時用戶記錄
-            if hasattr(self, 'guest_user_id') and not self.user.is_authenticated:
-                User.objects.filter(id=self.guest_user_id).delete()
             
             return True
         except Exception as e:
@@ -556,4 +556,27 @@ class GameConsumer(AsyncWebsocketConsumer):
             return None
         except Exception as e:
             print(f"Error getting player index: {e}")
+            return None
+
+    @database_sync_to_async
+    def create_guest_user(self, username):
+        """創建訪客用戶"""
+        try:
+            # 在方法內部導入 User 模型
+            from django.contrib.auth.models import User
+            
+            # 創建一個臨時用戶
+            temp_user, created = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    'password': uuid.uuid4().hex,  # 隨機密碼
+                    'is_active': True  # 需要是活躍的才能確保後續操作
+                }
+            )
+            
+            # 更新 self.user 為這個臨時用戶
+            self.user = temp_user
+            return temp_user
+        except Exception as e:
+            print(f"創建訪客用戶時出錯: {str(e)}")
             return None

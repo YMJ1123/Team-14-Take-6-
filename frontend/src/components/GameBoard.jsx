@@ -19,6 +19,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   // 同步成功狀態
   const [syncSuccess, setSyncSuccess] = useState(false);
+  // 玩家ID
+  const [playerId, setPlayerId] = useState(null);
+  // 所有玩家資訊
+  const [players, setPlayers] = useState([]);
   
   // 生成完整牌組 - 固定順序的牌組，所有玩家都用這個順序
   const generateDeck = () => {
@@ -117,11 +121,19 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     return remainingCards;
   };
   
-  // 找出當前玩家在房間中的索引 (暫時假設為0)
+  // 找出當前玩家在房間中的索引
   const findMyPlayerIndex = () => {
-    // 如果有玩家ID或其他識別信息，可在此根據socket中的信息查找
-    // 暫時假設為玩家0
-    return 0;
+    if (!playerId || players.length === 0) {
+      console.warn("Player ID 或玩家列表尚未準備好 (findMyPlayerIndex).");
+      return 0; 
+    }
+    const myIndex = players.findIndex(player => player.id === playerId); 
+    
+    if (myIndex === -1) {
+      console.warn(`玩家 ID "${playerId}" 在玩家列表 ${JSON.stringify(players)} 中未找到.`);
+      return 0; 
+    }
+    return myIndex;
   };
   
   // 初始化所有牌
@@ -135,26 +147,19 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     if (socket && isGameStarted && !hasDealtCards && playerCount > 0) {
       // 確定當前玩家在房間中的索引
       const playerIndex = findMyPlayerIndex();
+      console.log("我在這個房間的順序編號是：", playerIndex);
       
-      // 獲取當前玩家的手牌
-      const playerHand = getPlayerCards(playerIndex, playerCount);
+      // 設置「發牌中」的狀態
+      setHand([]);
       
-      // 設置玩家手牌
-      setHand(playerHand);
-      
-      // 獲取並設置剩餘牌組
-      const remaining = getRemainingCards(playerCount);
-      setRemainingCards(remaining);
-      
-      // 標記已經發過牌
-      setHasDealtCards(true);
-      
-      // 通知後端我們已經發牌
-      const handValues = playerHand.map(card => card.value);
+      // 不再在客戶端計算手牌，而是向後端請求
       socket.send(JSON.stringify({
-        type: "cards_drawn",
-        card_values: handValues
+        type: "request_cards",
+        player_index: playerIndex
       }));
+      
+      // 標記已經請求過牌
+      setHasDealtCards(true);
     }
   };
   
@@ -184,6 +189,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
 
     const handleMessage = (e) => {
       const data = JSON.parse(e.data);
+      console.log("GameBoard received message:", data);
       
       if (data.type === "update_board") {
         setBoard(data.board);
@@ -198,21 +204,56 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         setIsFlipping(true);
       }
       
+      // 更新玩家資訊和玩家ID
+      if (data.type === "room_info" && data.players) {
+        setPlayers(data.players); // 儲存完整的玩家列表
+        setPlayerCount(data.players.length);
+        console.log(`房間目前有 ${data.players.length} 位玩家. 玩家資料:`, data.players);
+
+        // 如果已取得 playerId，顯示自己在房間中的順序
+        if (playerId) {
+          const myIdx = players.findIndex(p => p.id === playerId);
+          if (myIdx !== -1) {
+            console.log(`我在房間中的順序編號是: ${myIdx} (從0開始計數)`);
+          }
+        }
+      }
+
+      // 處理來自後端的連接確認或身份訊息
+      if (data.type === "connection_established") {
+        if (data.playerId) { // 如果後端直接提供 playerId
+          setPlayerId(data.playerId);
+          console.log(`玩家 ID 已設定為: ${data.playerId}`);
+        } else if (data.message) { // 如果 playerId 包含在歡迎訊息中
+          const match = data.message.match(/歡迎\s+(.+?)!/);
+          if (match && match[1]) {
+            const extractedId = match[1].trim();
+            setPlayerId(extractedId);
+            console.log(`從訊息中提取並設定玩家 ID 為: ${extractedId}`);
+          }
+        }
+      }
+      
       // 更新玩家數量
-      if (data.type === "player_count" || data.type === "room_info") {
-        // 從不同消息類型中獲取玩家數量
-        const count = data.count || (data.players ? data.players.length : 0);
-        if (count > 0) {
-          console.log(`Updated player count: ${count}`);
+      if (data.type === "player_count" && data.players === undefined) { 
+        const count = data.count;
+        if (count !== undefined && count > 0 && players.length === 0) { 
+          console.log(`Updated player count via 'player_count': ${count}`);
           setPlayerCount(count);
         }
       }
       
-      // 處理玩家手牌
-      if (data.type === "deal_cards") {
-        const newHand = data.hand;
+      // 處理從後端接收到的卡牌分配
+      if (data.type === "cards_assigned") {
+        const newHand = data.cards;
         setHand(newHand);
         setSelectedCard(null);
+        
+        // 獲取並設置剩餘牌組
+        const remaining = getRemainingCards(playerCount);
+        setRemainingCards(remaining);
+        
+        console.log(`接收到後端分配的手牌:`, newHand.map(card => card.value));
       }
     };
 
@@ -229,7 +270,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     return () => {
       socket.removeEventListener("message", handleMessage);
     };
-  }, [socket, isGameStarted]);
+  }, [socket, isGameStarted, playerId, players]);
 
   // 創建空的牌位
   const createEmptyCardSlots = (rowIndex) => {

@@ -71,6 +71,25 @@ daphne -p 8000 take6.asgi:application
 
 他應該會在安裝之後自動記錄到package.json裡面，不用自己更新
 
+## 如果本地db有問題 pull別人正常的之後 還是有問題
+- Stop your Django development server.
+
+- Delete backend/db.sqlite3.
+
+- Delete migration files:
+    - Go to backend/game/migrations/ and delete all files inside it except __init__.py.
+    - Go to backend/users/migrations/ and delete all files inside it except __init__.py (if this folder and migration files exist).
+
+- Activate your Conda environment (final_team14).
+
+- Recreate migrations:
+    - From your project root (C:\Users\USER\Downloads\Team-14-Take-6-), run:
+        - python backend/manage.py makemigrations game
+        - python backend/manage.py makemigrations users
+
+- Apply migrations:
+    - Run python backend/manage.py migrate
+
 ## 進度
 
 - 0509 AndyChen

@@ -8,22 +8,62 @@ class GameState:
         self.player_count = player_count
         self.board_rows = [[] for _ in range(4)]  # 4列牌桌
         self.round = 0  # 總共會有10round
+        
+        # 創建並洗牌
         self.deck = create_deck()
         random.shuffle(self.deck)
-        
-        # 初始化牌桌，4列牌各放一張
-        for i in range(4):
-            self.board_rows[i].append(self.deck.pop())
-        
-        # 分發手牌給玩家（這裡僅生成，實際存儲要交給Django模型）
+        print("deck:")
+        for i in range(len(self.deck)):
+            d = self.deck[i]
+            print(d.value, end=' ')###
+        # 先為所有玩家分配手牌，確保每位玩家的牌不重複
         self.player_hands = []
+        used_card_values = set()  # 用於追踪已分配的牌值
+        
         for player_idx in range(player_count):
             hand = []
-            for _ in range(10):
-                card = self.deck.pop()
-                card.owner = player_idx  # 設定卡牌的擁有者
-                hand.append(card)
+            cards_needed = 10  # 每位玩家需要10張牌
+            
+            # 持續從牌組中抽取未被使用的牌
+            deck_index = 0
+            while len(hand) < cards_needed: #and deck_index < len(self.deck):
+                card = self.deck[deck_index]
+                deck_index += 1
+                
+                # 如果這張牌尚未分配給任何人，則添加到該玩家的手牌中
+                if card.value not in used_card_values:
+                    card_copy = Card(card.value)  # 創建一個新的卡牌對象，避免引用問題
+                    card_copy.owner = player_idx  # 設定卡牌的擁有者
+                    hand.append(card_copy)
+                    used_card_values.add(card.value)  # 標記此牌值為已使用
+            
             self.player_hands.append(hand)
+        print("player_hands:")
+        for i in range(len(self.player_hands)):
+            for j in range(len(self.player_hands[i])):
+                p = self.player_hands[i][j]
+                print(p.value, end=' ') ###
+        # 為牌桌分配4張初始牌，確保與玩家手牌不重複
+        deck_index = player_count*10
+        for i in range(4):
+            card = self.deck[deck_index]
+            deck_index += 1
+
+            card_copy = Card(card.value)  # 創建一個新的卡牌對象
+            self.board_rows[i].append(card_copy)
+            used_card_values.add(card.value)  # 標記此牌值為已使用
+        print("board_rows:")
+        for i in range(len(self.board_rows)):
+            b = self.board_rows[i]
+            for j in range(len(b)):
+                print(b[j].value, end=' ') ###
+        # 更新剩餘牌組：移除所有已分配的牌
+        # self.deck = [card for card in self.deck if card.value not in used_card_values]
+        self.deck = self.deck[(deck_index):]
+        print("deck:")
+        for i in range(len(self.deck)):
+            d = self.deck[i]
+            print(d.value, end=' ')###
     
     def find_closest_row(self, card):
         """找出與卡牌最接近的行"""
@@ -43,6 +83,69 @@ class GameState:
             return None
         
         return closest_row
+    
+    def play_card(self, player_idx, card_idx):
+        """玩家出牌
+        
+        參數:
+            player_idx: 玩家索引
+            card_idx: 玩家手牌中的卡牌索引
+            
+        返回:
+            dict: 含有操作結果的字典
+        """
+        if player_idx < 0 or player_idx >= self.player_count:
+            raise ValueError(f"玩家索引 {player_idx} 超出範圍")
+        
+        player_hand = self.player_hands[player_idx]
+        
+        if card_idx < 0 or card_idx >= len(player_hand):
+            raise ValueError(f"卡牌索引 {card_idx} 超出該玩家手牌範圍")
+        
+        # 取出玩家選擇的卡牌
+        card = player_hand.pop(card_idx)
+        
+        # 找到最接近的行
+        row_idx = self.find_closest_row(card)
+        
+        # 如果找不到合適的行，玩家必須選擇一個行收集
+        if row_idx is None:
+            bull_heads = [sum(card.bull_heads for card in row) for row in self.board_rows]
+            row_idx = bull_heads.index(min(bull_heads))
+            
+            # 收集牛頭
+            collected_bull_heads = sum(card.bull_heads for card in self.board_rows[row_idx])
+            
+            # 清空該行並放入新牌
+            self.board_rows[row_idx] = [card]
+            
+            return {
+                'player': player_idx,
+                'action': 'collect',
+                'row': row_idx,
+                'bull_heads': collected_bull_heads,
+                'card': {'value': card.value, 'bull_heads': card.bull_heads}
+            }
+        else:
+            # 如果該行已有5張牌，則收集牛頭
+            if len(self.board_rows[row_idx]) == 5:
+                collected_bull_heads = sum(card.bull_heads for card in self.board_rows[row_idx])
+                self.board_rows[row_idx] = [card]
+                return {
+                    'player': player_idx,
+                    'action': 'collect',
+                    'row': row_idx,
+                    'bull_heads': collected_bull_heads,
+                    'card': {'value': card.value, 'bull_heads': card.bull_heads}
+                }
+            else:
+                self.board_rows[row_idx].append(card)
+                return {
+                    'player': player_idx,
+                    'action': 'place',
+                    'row': row_idx,
+                    'card': {'value': card.value, 'bull_heads': card.bull_heads}
+                }
     
     def play_round(self):
         """同時讓四位玩家出牌並依照卡牌數字排序"""
