@@ -23,6 +23,12 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [playerId, setPlayerId] = useState(null);
   // 所有玩家資訊
   const [players, setPlayers] = useState([]);
+  // 用戶已出的牌
+  const [playedCard, setPlayedCard] = useState(null);
+  // 確認按鈕狀態
+  const [showConfirmButton, setShowConfirmButton] = useState(false);
+  // 當前用戶名
+  const [currentUser, setCurrentUser] = useState("");
   
   // 生成完整牌組 - 固定順序的牌組，所有玩家都用這個順序
   const generateDeck = () => {
@@ -198,10 +204,42 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       if (data.type === "flipped_cards") {
         setFlippedCards(data.cards);
         setIsFlipping(false);
+        // 收到所有翻開的牌後，重置已出牌狀態
+        setPlayedCard(null);
       }
       
       if (data.type === "player_flipping") {
         setIsFlipping(true);
+      }
+      
+      // 處理出牌確認 - 其他玩家出牌不會影響我們的手牌
+      if (data.type === "card_played") {
+        console.log("有玩家出牌:", data);
+        
+        // 檢查是否是其他玩家出的牌
+        const isOtherPlayer = data.player_id !== playerId;
+        
+        // 只有在確實是其他玩家出的牌時才添加到翻牌區域
+        if (isOtherPlayer) {
+          // 創建一個臨時的牌對象，用於顯示其他玩家的牌（背面）
+          const tempCard = {
+            player_name: data.player_name || data.player_username || "其他玩家",
+            player_id: data.player_id,
+            isOtherPlayer: true  // 標記這是其他玩家的牌
+          };
+          
+          // 將其他玩家出的牌（背面）添加到翻牌區
+          setFlippedCards(prev => {
+            // 過濾掉已存在的同玩家牌，避免重複
+            const filtered = prev.filter(card => 
+              !card.player_id || card.player_id !== tempCard.player_id
+            );
+            return [...filtered, tempCard];
+          });
+        } else {
+          // 如果是自己出的牌，我們已經在本地顯示了，不需要重複添加 problem
+          console.log("收到自己出牌的廣播，忽略");
+        }
       }
       
       // 更新玩家資訊和玩家ID
@@ -224,12 +262,15 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         if (data.playerId) { // 如果後端直接提供 playerId
           setPlayerId(data.playerId);
           console.log(`玩家 ID 已設定為: ${data.playerId}`);
-        } else if (data.message) { // 如果 playerId 包含在歡迎訊息中
-          const match = data.message.match(/歡迎\s+(.+?)!/);
-          if (match && match[1]) {
-            const extractedId = match[1].trim();
-            setPlayerId(extractedId);
-            console.log(`從訊息中提取並設定玩家 ID 為: ${extractedId}`);
+          
+          // 如果有用戶名，也設置它
+          if (data.message) {
+            const match = data.message.match(/歡迎\s+(.+?)!/);
+            if (match && match[1]) {
+              const username = match[1].trim();
+              setCurrentUser(username);
+              console.log(`設定當前用戶名為: ${username}`);
+            }
           }
         }
       }
@@ -248,12 +289,8 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         const newHand = data.cards;
         setHand(newHand);
         setSelectedCard(null);
-        
-        // 獲取並設置剩餘牌組
-        const remaining = getRemainingCards(playerCount);
-        setRemainingCards(remaining);
-        
-        console.log(`接收到後端分配的手牌:`, newHand.map(card => card.value));
+        setPlayedCard(null); // 重置已出牌狀態
+        console.log("收到手牌:", newHand);
       }
     };
 
@@ -292,41 +329,147 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     return slots;
   };
   
-  // 建立翻牌區內容
+  // 渲染翻牌區域
   const renderFlipArea = () => {
+    const allCards = [];
+    
+    // 如果用戶已出牌，添加自己的牌到顯示列表
+    if (playedCard) {
+      allCards.push({
+        key: `my-card`,
+        element: (
+          <div className="flipped-card">
+            <Card
+              value={playedCard.value}
+              bullHeads={playedCard.bull_heads}
+              isBack={true}  // 使用 isBack 屬性來顯示牌背 problem
+              isPlayed={true}
+            />
+            <div className="player-name">我</div>
+          </div>
+        )
+      });
+    }
+    
+    // 如果有來自服務器的翻牌數據，添加到顯示列表
     if (flippedCards.length > 0) {
-      return flippedCards.map((card, index) => (
-        <div key={`flip-${index}`} className="flipped-card">
-          <Card
-            value={card.value}
-            bullHeads={card.bull_heads}
-            isPlayed={true}
-          />
-          <div className="player-name">{card.player_name}</div>
-        </div>
+      flippedCards.forEach((card, index) => {
+        // 檢查這張牌是否來自其他玩家（不是自己）
+        const isFromOtherPlayer = card.isOtherPlayer;
+        
+        if (isFromOtherPlayer) {
+          // 添加其他玩家的牌（背面）
+          allCards.push({
+            key: `other-player-${index}`,
+            element: (
+              <div className="flipped-card">
+                <Card
+                  value={1}  // 給一個默認值
+                  bullHeads={1}
+                  isBack={true}  // 顯示牌背
+                  isPlayed={true}
+                />
+                <div className="player-name">{card.player_name}</div>
+              </div>
+            )
+          });
+        } else {
+          // 正常顯示已翻開的牌
+          allCards.push({
+            key: `flipped-${index}`,
+            element: (
+              <div className="flipped-card">
+                <Card
+                  value={card.value}
+                  bullHeads={card.bull_heads}
+                  isPlayed={true}
+                />
+                <div className="player-name">{card.player_name}</div>
+              </div>
+            )
+          });
+        }
+      });
+    }
+    
+    // 如果有牌要顯示，渲染它們
+    if (allCards.length > 0) {
+      return allCards.map(item => (
+        <React.Fragment key={item.key}>
+          {item.element}
+        </React.Fragment>
       ));
-    } else {
+    }
+    
+    // 如果正在翻牌過程中
+    if (isFlipping) {
       return (
         <div className="waiting-message">
-          {isFlipping ? "翻牌中..." : "等待所有玩家出牌"}
+          翻牌中...
         </div>
       );
     }
+    
+    // 默認狀態：等待所有玩家出牌
+    return (
+      <div className="waiting-message">
+        請選擇一張牌出牌
+      </div>
+    );
   };
   
-  // 處理玩家出牌
+  // 處理玩家選擇牌
   const playCard = (cardIndex) => {
+    // 如果已經出牌，不允許再選
+    if (playedCard !== null) {
+      return;
+    }
+
+    // 如果點擊的是已選中的牌，取消選擇
     if (selectedCard === cardIndex) {
-      // 確認出牌
-      socket.send(JSON.stringify({
-        type: "play_card",
-        card_idx: cardIndex,
-      }));
       setSelectedCard(null);
+      setShowConfirmButton(false);
     } else {
       // 選擇牌
       setSelectedCard(cardIndex);
+      setShowConfirmButton(true);
     }
+  };
+
+  // 確認出牌
+  const confirmPlayCard = () => {
+    if (selectedCard === null) return;
+
+    // 獲取選中的牌
+    const card = hand[selectedCard];
+    
+    // 保存已出牌的信息
+    setPlayedCard(card);
+    
+    // 從手牌中移除該牌
+    const newHand = [...hand];
+    newHand.splice(selectedCard, 1);
+    setHand(newHand);
+    
+    // 發送出牌信息到服務器，包括更多信息 problem
+    socket.send(JSON.stringify({
+      type: "play_card",
+      card_idx: selectedCard,
+      player_id: playerId,  // 發送自己的 ID
+      player_name: currentUser || "玩家", // 發送玩家名稱
+      value: card.value, // 發送牌值（後端可以決定是否向其他玩家揭示）
+      bull_heads: card.bull_heads // 發送牛頭數（後端可以決定是否向其他玩家揭示）
+    }));
+    
+    // 重置選擇狀態
+    setSelectedCard(null);
+    setShowConfirmButton(false);
+  };
+
+  // 取消選擇
+  const cancelSelection = () => {
+    setSelectedCard(null);
+    setShowConfirmButton(false);
   };
   
   // 渲染剩餘牌組 - 按數值排序顯示
@@ -442,14 +585,12 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         ))}
         
         {/* 作為第5列的同時翻牌 */}
-        {!isGameStarted && (
-          <div className="board-row flip-area-row">
-            <div className="row-header">同時翻牌</div>
-            <div className="flip-cards-container">
-              {renderFlipArea()}
-            </div>
+        <div className="board-row flip-area-row">
+          <div className="row-header">同時翻牌</div>
+          <div className="flip-cards-container">
+            {renderFlipArea()}
           </div>
-        )}
+        </div>
         
         {/* 整合進牌桌的我的手牌 - 移除框框 */}
         <div className="my-hand-row">
@@ -486,6 +627,18 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                 遊戲開始後將顯示您的牌
               </span>
             )}
+          </div>
+          <div>
+              {selectedCard !== null && (
+                <div className="card-action">
+                  <button onClick={confirmPlayCard} className="confirm-play-btn">
+                    確認出牌
+                  </button>
+                  <button onClick={cancelSelection} className="cancel-btn">
+                    取消
+                  </button>
+                </div>
+              )}
           </div>
         </div>
       </div>
@@ -531,17 +684,6 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
               上次同步: {lastSyncTime}
             </div>
           )}
-        </div>
-      )}
-      
-      {selectedCard !== null && (
-        <div className="card-action">
-          <button onClick={() => playCard(selectedCard)} className="confirm-play-btn">
-            確認出牌
-          </button>
-          <button onClick={() => setSelectedCard(null)} className="cancel-btn">
-            取消
-          </button>
         </div>
       )}
       

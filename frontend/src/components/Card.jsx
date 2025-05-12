@@ -1,10 +1,13 @@
 import React from "react";
 import "../styles/card.css";
 
-const Card = ({ value, bullHeads, isPlayed = false, isBack = false, onClick, smallSize = false }) => {
+const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, isBack = false }) => {
+  // 判斷是否顯示牌背（不再使用 value === "back"）
+  const isCardBack = isBack;
+  
   // 根據牛頭數量確定卡牌顏色 - 確保相同牛頭數有相同顏色
   const getCardColor = () => {
-    if (isBack) return "card-back";
+    if (isCardBack) return "card-back";
     
     switch(bullHeads) {
       case 1: return "card-color-1";
@@ -17,7 +20,7 @@ const Card = ({ value, bullHeads, isPlayed = false, isBack = false, onClick, sma
   };
 
   // 如果是卡牌背面
-  if (isBack) {
+  if (isCardBack) {
     return (
       <div className={`card card-back ${smallSize ? 'card-small' : ''}`} onClick={onClick}>
         <div className="card-inner">
