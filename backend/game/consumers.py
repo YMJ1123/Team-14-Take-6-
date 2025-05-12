@@ -166,36 +166,6 @@ class GameConsumer(AsyncWebsocketConsumer):
                         'username': username
                     }
                 )
-                
-            elif message_type == 'sync_remaining_cards':
-                # 處理同步剩餘牌組的請求
-                cards = data.get('cards', [])
-                
-                # 檢查牌組數據是否有效
-                if isinstance(cards, list) and len(cards) > 0:
-                    # 將同步請求廣播給房間內所有玩家
-                    await self.channel_layer.group_send(
-                        self.room_group_name,
-                        {
-                            'type': 'sync_remaining_cards',
-                            'cards': cards,
-                            'sync_by': username
-                        }
-                    )
-                    
-                    # 發送確認消息回請求者
-                    await self.send(text_data=json.dumps({
-                        'type': 'sync_remaining_cards',
-                        'cards': cards,
-                        'status': 'success',
-                        'message': '同步成功'
-                    }))
-                else:
-                    # 發送錯誤消息回請求者
-                    await self.send(text_data=json.dumps({
-                        'type': 'error',
-                        'message': '同步牌組失敗，數據無效'
-                    }))
 
         except Exception as e:
             await self.send(text_data=json.dumps({
@@ -387,14 +357,6 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'player_ready_state',
             'username': event['username'],
             'is_ready': event['is_ready']
-        }))
-        
-    async def sync_remaining_cards(self, event):
-        # 將同步的牌組數據發送給客戶端
-        await self.send(text_data=json.dumps({
-            'type': 'sync_remaining_cards',
-            'cards': event['cards'],
-            'sync_by': event.get('sync_by', '系統')
         }))
     
     @database_sync_to_async

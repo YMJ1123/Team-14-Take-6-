@@ -1,20 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import "../styles/card.css";
 
-const Card = ({ value, bullHeads, isPlayed = false, isBack = false, onClick, smallSize = false, isDealing = false }) => {
-  const [isAnimating, setIsAnimating] = useState(isDealing);
-
-  // 設置動畫效果
-  useEffect(() => {
-    if (isDealing) {
-      setIsAnimating(true);
-      const timer = setTimeout(() => {
-        setIsAnimating(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isDealing]);
-
+const Card = ({ value, bullHeads, isPlayed = false, isBack = false, onClick, smallSize = false }) => {
   // 根據牛頭數量確定卡牌顏色 - 確保相同牛頭數有相同顏色
   const getCardColor = () => {
     if (isBack) return "card-back";
@@ -32,7 +19,7 @@ const Card = ({ value, bullHeads, isPlayed = false, isBack = false, onClick, sma
   // 如果是卡牌背面
   if (isBack) {
     return (
-      <div className={`card card-back ${smallSize ? 'card-small' : ''} ${isAnimating ? 'dealing' : ''}`} onClick={onClick}>
+      <div className={`card card-back ${smallSize ? 'card-small' : ''}`} onClick={onClick}>
         <div className="card-inner">
           <div className="card-design"></div>
         </div>
@@ -42,8 +29,14 @@ const Card = ({ value, bullHeads, isPlayed = false, isBack = false, onClick, sma
 
   return (
     <div 
-      className={`card ${getCardColor()} ${isPlayed ? 'played' : ''} ${smallSize ? 'card-small' : ''} ${isAnimating ? 'dealing' : ''}`}
+      className={`card ${getCardColor()} ${isPlayed ? 'played' : ''} ${smallSize ? 'card-small' : ''}`}
       onClick={onClick}
+      style={{ 
+        backgroundImage: "url('/images/bull-head-bg.png')",
+        backgroundSize: "85%",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat"
+      }}
     >
       <div className="card-inner">
         <div className="card-number">{value}</div>

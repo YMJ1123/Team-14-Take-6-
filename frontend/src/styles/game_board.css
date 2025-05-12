@@ -112,26 +112,19 @@
 
 .player-hand {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 5px;
+  flex-wrap: wrap;
+  gap: 10px;
   justify-content: center;
-  align-items: flex-end;
-  perspective: 500px;
-  height: 140px;
   width: 100%;
-  position: relative;
 }
 
 .hand-card {
-  transition: transform 0.3s, box-shadow 0.3s;
-  position: relative;
-  transform-style: preserve-3d;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .hand-card.selected {
-  transform: translateY(-20px) !important;
+  transform: translateY(-10px);
   box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
-  z-index: 100 !important;
 }
 
 .empty-hand-message {
@@ -211,7 +204,7 @@
 }
 
 .card-in-display {
-  transition: transform 0.3s ease, z-index 0.2s;
+  transition: transform 0.2s ease, z-index 0.2s;
   position: relative;
 }
 
@@ -249,73 +242,4 @@
 
 .start-game-btn:hover {
   background-color: #2980b9;
-}
-
-/* 新增進度條和發牌動畫樣式 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.dealing-progress-container {
-  position: relative;
-  width: 100%;
-  height: 8px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 15px;
-}
-
-.dealing-progress-bar {
-  height: 100%;
-  background-color: #3498db;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-/* 同步按鈕樣式 */
-.sync-button {
-  padding: 8px 15px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-}
-
-.sync-button:hover {
-  background-color: #2980b9;
-}
-
-.sync-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
-}
-
-.sync-spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid white;
-  border-top-color: transparent;
-  margin-right: 8px;
-  animation: spin 1s linear infinite;
-}
-
-.sync-warning {
-  color: #e74c3c;
-  padding: 5px;
-  margin-bottom: 10px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: bold;
-  background-color: rgba(231, 76, 60, 0.1);
-  border: 1px solid rgba(231, 76, 60, 0.3);
 }

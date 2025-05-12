@@ -19,14 +19,6 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [lastSyncTime, setLastSyncTime] = useState(null);
   // 同步成功狀態
   const [syncSuccess, setSyncSuccess] = useState(false);
-  // 玩家ID
-  const [playerId, setPlayerId] = useState(null);
-  // 所有玩家資訊
-  const [players, setPlayers] = useState([]);
-  // 發牌動畫
-  const [isDealing, setIsDealing] = useState(false);
-  // 發牌進度 (0-100%)
-  const [dealProgress, setDealProgress] = useState(0);
   
   // 生成完整牌組 - 固定順序的牌組，所有玩家都用這個順序
   const generateDeck = () => {
@@ -70,15 +62,6 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     }
     
     return result;
-  };
-  
-  // 找出當前玩家在房間中的索引
-  const findMyPlayerIndex = () => {
-    if (!playerId || players.length === 0) return 0;
-    
-    // 在players數組中查找當前玩家的索引
-    const myIndex = players.findIndex(player => player.id === playerId);
-    return myIndex >= 0 ? myIndex : 0;
   };
   
   // 根據玩家索引和玩家總數，計算該玩家應該得到的牌
@@ -134,14 +117,11 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     return remainingCards;
   };
   
-  // 調試用 - 檢查所有玩家的手牌分配
-  const debugPlayerCards = (totalPlayers) => {
-    console.log(`=== 玩家手牌分配 (共${totalPlayers}名玩家) ===`);
-    for (let i = 0; i < totalPlayers; i++) {
-      const cards = getPlayerCards(i, totalPlayers);
-      const cardValues = cards.map(c => c.value).join(', ');
-      console.log(`玩家 ${i}: ${cardValues}`);
-    }
+  // 找出當前玩家在房間中的索引 (暫時假設為0)
+  const findMyPlayerIndex = () => {
+    // 如果有玩家ID或其他識別信息，可在此根據socket中的信息查找
+    // 暫時假設為玩家0
+    return 0;
   };
   
   // 初始化所有牌
@@ -153,58 +133,28 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   // 處理發牌
   const dealCards = () => {
     if (socket && isGameStarted && !hasDealtCards && playerCount > 0) {
-      // 設置發牌動畫狀態
-      setIsDealing(true);
-      setDealProgress(0);
-      
       // 確定當前玩家在房間中的索引
       const playerIndex = findMyPlayerIndex();
-      
-      console.log(`我是玩家 ${playerIndex}, 總共 ${playerCount} 名玩家`);
-      
-      // 調試 - 檢查所有玩家的手牌分配
-      debugPlayerCards(playerCount);
       
       // 獲取當前玩家的手牌
       const playerHand = getPlayerCards(playerIndex, playerCount);
       
-      // 模擬發牌動畫
-      let progress = 0;
-      const dealInterval = setInterval(() => {
-        progress += 10;
-        setDealProgress(progress);
-        
-        // 逐漸增加手牌數量，製造發牌效果
-        if (progress % 20 === 0) {
-          const cardIndex = (progress / 20) - 1;
-          if (cardIndex < playerHand.length) {
-            setHand(prev => [...prev, playerHand[cardIndex]]);
-          }
-        }
-        
-        // 發牌完畢
-        if (progress >= 100) {
-          clearInterval(dealInterval);
-          setIsDealing(false);
-          
-          // 確保所有牌都顯示了
-          setHand(playerHand);
-          
-          // 獲取並設置剩餘牌組
-          const remaining = getRemainingCards(playerCount);
-          setRemainingCards(remaining);
-          
-          // 標記已經發過牌
-          setHasDealtCards(true);
-          
-          // 通知後端我們已經發牌
-          const handValues = playerHand.map(card => card.value);
-          socket.send(JSON.stringify({
-            type: "cards_drawn",
-            card_values: handValues
-          }));
-        }
-      }, 150);
+      // 設置玩家手牌
+      setHand(playerHand);
+      
+      // 獲取並設置剩餘牌組
+      const remaining = getRemainingCards(playerCount);
+      setRemainingCards(remaining);
+      
+      // 標記已經發過牌
+      setHasDealtCards(true);
+      
+      // 通知後端我們已經發牌
+      const handValues = playerHand.map(card => card.value);
+      socket.send(JSON.stringify({
+        type: "cards_drawn",
+        card_values: handValues
+      }));
     }
   };
   
@@ -213,9 +163,9 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     if (isGameStarted && hand.length === 0 && !hasDealtCards && playerCount > 0) {
       dealCards();
     }
-  }, [isGameStarted, hand.length, hasDealtCards, playerCount, players, playerId]);
+  }, [isGameStarted, hand.length, hasDealtCards, playerCount]);
   
-  // 當玩家數量或玩家列表變更時，重新計算剩餘牌組
+  // 當玩家數量變更時，重新計算剩餘牌組
   useEffect(() => {
     if (isGameStarted && playerCount > 0) {
       const remaining = getRemainingCards(playerCount);
@@ -226,80 +176,61 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         dealCards();
       }
     }
-  }, [isGameStarted, playerCount, players, playerId]);
-  
-  // 監聽WebSocket訊息以更新玩家資訊和玩家ID
+  }, [playerCount, isGameStarted]);
+
+  // Socket消息處理
   useEffect(() => {
     if (!socket) return;
-    
+
     const handleMessage = (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        console.log("GameBoard received message:", data);
-        
-        if (data.type === "room_info" && data.players) {
-          setPlayers(data.players);
-          setPlayerCount(data.players.length);
-          console.log(`Room has ${data.players.length} players`);
+      const data = JSON.parse(e.data);
+      
+      if (data.type === "update_board") {
+        setBoard(data.board);
+      }
+      
+      if (data.type === "flipped_cards") {
+        setFlippedCards(data.cards);
+        setIsFlipping(false);
+      }
+      
+      if (data.type === "player_flipping") {
+        setIsFlipping(true);
+      }
+      
+      // 更新玩家數量
+      if (data.type === "player_count" || data.type === "room_info") {
+        // 從不同消息類型中獲取玩家數量
+        const count = data.count || (data.players ? data.players.length : 0);
+        if (count > 0) {
+          console.log(`Updated player count: ${count}`);
+          setPlayerCount(count);
         }
-        
-        if (data.type === "connection_established") {
-          // 從連接成功訊息中提取玩家ID
-          const match = data.message.match(/歡迎\s+(.+?)!/);
-          if (match && match[1]) {
-            setPlayerId(match[1].trim());
-            console.log(`Player ID set to: ${match[1].trim()}`);
-          }
-        }
-        
-        if (data.type === "sync_remaining_cards" && data.cards) {
-          // 接收同步的剩餘牌組資料
-          setRemainingCards(data.cards);
-          setSyncSuccess(true);
-          setIsSyncing(false);
-          setLastSyncTime(new Date().toLocaleTimeString());
-          
-          // 2秒後清除同步成功提示
-          setTimeout(() => {
-            setSyncSuccess(false);
-          }, 2000);
-        }
-      } catch (error) {
-        console.error("Error parsing message:", error);
+      }
+      
+      // 處理玩家手牌
+      if (data.type === "deal_cards") {
+        const newHand = data.hand;
+        setHand(newHand);
+        setSelectedCard(null);
       }
     };
-    
+
     socket.addEventListener("message", handleMessage);
+    
+    // 遊戲開始時請求房間信息
+    if (isGameStarted) {
+      // 請求房間信息
+      socket.send(JSON.stringify({
+        type: "get_room_info"
+      }));
+    }
     
     return () => {
       socket.removeEventListener("message", handleMessage);
     };
-  }, [socket]);
-  
-  // 手動同步剩餘牌組
-  const syncRemainingCards = () => {
-    if (socket && socket.readyState === WebSocket.OPEN && playerCount > 0) {
-      setIsSyncing(true);
-      
-      // 重新計算剩餘牌組
-      const remaining = getRemainingCards(playerCount);
-      setRemainingCards(remaining);
-      
-      // 發送同步請求
-      socket.send(JSON.stringify({
-        type: "sync_remaining_cards",
-        cards: remaining
-      }));
-      
-      // 如果5秒內沒有收到回應，結束同步狀態
-      setTimeout(() => {
-        if (isSyncing) {
-          setIsSyncing(false);
-        }
-      }, 5000);
-    }
-  };
-  
+  }, [socket, isGameStarted]);
+
   // 創建空的牌位
   const createEmptyCardSlots = (rowIndex) => {
     const slots = [];
@@ -370,106 +301,83 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     // 理論上應有的剩餘牌數
     const expectedCount = playerCount > 0 ? 104 - (playerCount * 10) : displayedCount;
     
-    // 判斷是否有同步問題
-    const hasDiscrepancy = displayedCount !== expectedCount;
-    
+    // 是否需要顯示警告
+    const showWarning = playerCount > 0 && displayedCount !== expectedCount;
+
+    // 剩餘牌組已按值排序，直接顯示
     return (
-      <div className="remaining-cards-container" style={{ position: 'relative' }}>
-        <h2 className="remaining-title">剩餘牌組 ({displayedCount} 張)</h2>
-        
-        {/* 同步狀態顯示 */}
-        {lastSyncTime && (
-          <div className="sync-status" style={{ 
-            position: 'absolute', 
-            right: '15px', 
-            top: '15px',
-            fontSize: '12px',
-            color: '#fff'
-          }}>
-            上次同步: {lastSyncTime}
-          </div>
-        )}
-        
-        {/* 牌組同步警告 */}
-        {hasDiscrepancy && (
-          <div className="sync-warning" style={{
-            color: '#e74c3c',
-            padding: '5px',
-            marginBottom: '10px',
-            borderRadius: '4px',
-            fontSize: '14px',
-            fontWeight: 'bold'
-          }}>
-            牌組同步有誤! 應有 {expectedCount} 張牌，實際顯示 {displayedCount} 張。
-            建議點擊下方的同步按鈕。
-          </div>
-        )}
-        
+      <div className="remaining-cards-container">
+        <div className="remaining-title">剩餘牌數</div>
         <div className="all-cards-display">
           {remainingCards.map((card, index) => (
             <div 
-              key={`remaining-${card.value}`}
+              key={`remaining-${card.value}`} 
               className="card-in-display"
               style={{ 
-                transform: `rotate(${(Math.random() * 4 - 2)}deg)`,
-                zIndex: index % 10,
-                marginLeft: index > 0 ? '-30px' : '0',
-                transition: 'transform 0.3s ease'
+                marginLeft: index > 0 ? '-25px' : '0'
               }}
             >
               <Card 
-                value={card.value}
-                bullHeads={card.bull_heads}
+                value={card.value} 
+                bullHeads={card.bull_heads} 
+                smallSize={true} 
                 isPlayed={true}
-                smallSize={true}
-                isDealing={false}
               />
             </div>
           ))}
         </div>
-        
         <div className="card-distribution-info">
-          遊戲共 104 張牌，
-          牌桌上放置 4 張初始牌，
-          {playerCount > 0 ? `${playerCount} 名玩家各持有 10 張牌` : "等待玩家加入..."}
+          剩餘: {displayedCount} 張
+          {playerCount > 0 && (
+            <div className="players-info">
+              遊戲人數: {playerCount} 人 
+              {showWarning && (
+                <div className="warning">
+                  (預期剩餘: {expectedCount} 張)
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     );
   };
-  
-  // 計算玩家手牌在牌桌上的位置
-  const calculateHandPosition = (index, total) => {
-    const angle = -30 + (60 / (total - 1 || 1)) * index;
-    const distance = 10;
-    return {
-      transform: `rotate(${angle}deg) translateY(${-distance}px)`,
-      transformOrigin: 'bottom center',
-      marginRight: '-25px',
-      zIndex: index
-    };
-  };
-  
-  // 渲染發牌進度條
-  const renderDealProgress = () => {
-    if (!isDealing) return null;
+
+  // 手動同步剩餘牌
+  const syncRemainingCards = () => {
+    setIsSyncing(true);
     
-    return (
-      <div className="dealing-progress-container" style={{
-        width: '100%',
-        marginBottom: '15px',
-        borderRadius: '4px',
-        overflow: 'hidden',
-        height: '8px',
-        backgroundColor: '#e0e0e0'
-      }}>
-        <div className="dealing-progress-bar" style={{
-          width: `${dealProgress}%`,
-          height: '100%',
-          backgroundColor: '#3498db',
-          transition: 'width 0.2s ease'
-        }}></div>
-      </div>
-    );
+    // 重新計算剩餘牌組
+    if (playerCount > 0) {
+      const remaining = getRemainingCards(playerCount);
+      setRemainingCards(remaining);
+      
+      // 設置同步成功狀態
+      setTimeout(() => {
+        setIsSyncing(false);
+        setSyncSuccess(true);
+        setLastSyncTime(new Date().toLocaleTimeString());
+        
+        // 3秒後清除成功狀態
+        setTimeout(() => {
+          setSyncSuccess(false);
+        }, 3000);
+      }, 500);
+    } else {
+      // 如果沒有玩家數量信息，嘗試獲取房間信息
+      if (socket) {
+        socket.send(JSON.stringify({
+          type: "get_room_info"
+        }));
+        
+        // 2秒後如果還沒有收到數據，取消同步狀態
+        setTimeout(() => {
+          if (isSyncing) {
+            setIsSyncing(false);
+          }
+        }, 2000);
+      }
+    }
   };
 
   if (!isPrepared) {
@@ -478,53 +386,58 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
 
   return (
     <div className="game-board-container">
-      <div
-        className="game-board"
-        style={{ backgroundImage: "url('/images/bg.jpg')" }}
+      <div 
+        className="game-board" 
+        style={{ backgroundImage: "url('/images/2x2_background_table.jpeg')" }}
       >
-        {/* 牌桌區域 */}
-        {[0, 1, 2, 3].map((rowIndex) => (
-          <div key={rowIndex} className="board-row">
+        {/* 正常的4列遊戲牌桌 */}
+        {board.map((row, rowIndex) => (
+          <div key={`row-${rowIndex}`} className="board-row">
             <div className="row-header">第 {rowIndex + 1} 列</div>
-            <div className="row-cards">{createEmptyCardSlots(rowIndex)}</div>
+            <div className="row-cards">
+              {createEmptyCardSlots(rowIndex)}
+            </div>
           </div>
         ))}
-
-        {/* 翻牌區 */}
-        <div className="board-row flip-area-row">
-          <div className="row-header">翻牌區</div>
-          <div className="flip-cards-container">{renderFlipArea()}</div>
-        </div>
-
-        {/* 我的手牌區域 */}
-        <div className="board-row my-hand-row">
+        
+        {/* 作為第5列的同時翻牌 */}
+        {!isGameStarted && (
+          <div className="board-row flip-area-row">
+            <div className="row-header">同時翻牌</div>
+            <div className="flip-cards-container">
+              {renderFlipArea()}
+            </div>
+          </div>
+        )}
+        
+        {/* 整合進牌桌的我的手牌 - 移除框框 */}
+        <div className="my-hand-row">
           <div className="row-header">我的手牌</div>
           <div className="my-hand-container">
-            {renderDealProgress()}
             {isGameStarted ? (
               hand.length > 0 ? (
                 <div className="player-hand">
                   {hand.map((card, index) => (
-                    <div
-                      key={index}
-                      className={`hand-card ${
-                        selectedCard === index ? "selected" : ""
-                      }`}
-                      style={calculateHandPosition(index, hand.length)}
+                    <div 
+                      key={`hand-${index}`} 
+                      className={`hand-card ${selectedCard === index ? 'selected' : ''}`}
+                      style={{ 
+                        transform: `rotate(${Math.random() * 2 - 1}deg)`,
+                        marginLeft: index > 0 ? '-15px' : '0'
+                      }}
                     >
                       <Card
                         value={card.value}
                         bullHeads={card.bull_heads}
                         isPlayed={false}
                         onClick={() => playCard(index)}
-                        isDealing={isDealing && index === hand.length - 1}
                       />
                     </div>
                   ))}
                 </div>
               ) : (
                 <span className="empty-hand-message">
-                  {isDealing ? "發牌中..." : "等待發牌..."}
+                  發牌中...
                 </span>
               )
             ) : (
@@ -561,30 +474,46 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
             }}
           >
             {isSyncing ? (
-              <>
-                <span className="sync-spinner" style={{
-                  display: 'inline-block',
-                  width: '14px',
-                  height: '14px',
-                  borderRadius: '50%',
-                  border: '2px solid white',
-                  borderTopColor: 'transparent',
-                  marginRight: '8px',
-                  animation: 'spin 1s linear infinite'
-                }}></span>
-                同步中...
-              </>
+              <span>同步中...</span>
             ) : syncSuccess ? (
-              <>
-                <span style={{ marginRight: '8px' }}>✓</span>
-                同步成功!
-              </>
+              <span>同步成功 ✓</span>
             ) : (
-              <>
-                <span style={{ marginRight: '8px' }}>↻</span>
-                同步牌組
-              </>
+              <span>同步剩餘牌數</span>
             )}
+          </button>
+          {lastSyncTime && (
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#666', 
+              marginTop: '5px' 
+            }}>
+              上次同步: {lastSyncTime}
+            </div>
+          )}
+        </div>
+      )}
+      
+      {selectedCard !== null && (
+        <div className="card-action">
+          <button onClick={() => playCard(selectedCard)} className="confirm-play-btn">
+            確認出牌
+          </button>
+          <button onClick={() => setSelectedCard(null)} className="cancel-btn">
+            取消
+          </button>
+        </div>
+      )}
+      
+      {/* 遊戲開始按鈕 */}
+      {isPrepared && !isGameStarted && (
+        <div className="game-controls">
+          <button 
+            className="start-game-btn"
+            onClick={() => {
+              socket.send(JSON.stringify({ type: "start_game" }));
+            }}
+          >
+            遊戲開始
           </button>
         </div>
       )}
