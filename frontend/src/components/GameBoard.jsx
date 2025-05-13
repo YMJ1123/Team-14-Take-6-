@@ -686,20 +686,6 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
           )}
         </div>
       )}
-      
-      {/* 遊戲開始按鈕 */}
-      {isPrepared && !isGameStarted && (
-        <div className="game-controls">
-          <button 
-            className="start-game-btn"
-            onClick={() => {
-              socket.send(JSON.stringify({ type: "start_game" }));
-            }}
-          >
-            遊戲開始
-          </button>
-        </div>
-      )}
     </div>
   );
 };

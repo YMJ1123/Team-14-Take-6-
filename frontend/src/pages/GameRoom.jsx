@@ -18,6 +18,7 @@ const GameRoom = () => {
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [playerCount, setPlayerCount] = useState(0);
   const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const backgroundMusicRef = useRef(null);
   const gameStartSoundRef = useRef(null);
   const [currentUser, setCurrentUser] = useState(null);
@@ -201,13 +202,31 @@ const GameRoom = () => {
       if (data.type === "game_started") {
         handleGameStarted(data);
       }
+      
+      // 處理檢查管理員的回覆
+      if (data.type === "admin_check") {
+        console.log("Received admin check:", data);
+        setIsAdmin(data.is_admin);
+      }
+      
+      // 處理玩家準備狀態更新，也可能包含房主信息
+      if (data.type === "player_ready_state") {
+        // 如果消息中包含用戶ID和管理員信息，且與當前用戶相關，則更新管理員狀態
+        if (data.user_id !== undefined && data.is_admin !== undefined) {
+          // 後端應該會返回當前用戶的 ID，可以在 connection_established 時記錄
+          // 如果沒有特定的方式確認當前用戶，可能需要額外邏輯來匹配
+          if (data.username === currentUser) {
+            setIsAdmin(data.is_admin);
+          }
+        }
+      }
     };
 
     socket.addEventListener("message", handleMessage);
     return () => {
       socket.removeEventListener("message", handleMessage);
     };
-  }, [socket]);
+  }, [socket, currentUser]);
 
   const toggleMusic = () => {
     if (isMusicPlaying) {
@@ -237,13 +256,16 @@ const GameRoom = () => {
   return (
     <div className="container">
       <div className="room-header">
-        <h1>Take 6! 線上牛頭王 - 遊戲房間: {roomName}</h1>
+        <h1>
+          Take 6! 線上牛頭王 - 遊戲房間: {roomName}
+          {isAdmin && <span className="admin-badge" title="你是房主">👑</span>}
+        </h1>
         <div className="room-actions">
           <button onClick={toggleMusic} className={isMusicPlaying ? "music-btn playing" : "music-btn"}>
             {isMusicPlaying ? "停止音樂" : "播放音樂"}
           </button>
           <button onClick={() => navigate('/')} className="back-btn">返回大廳</button>
-          <button onClick={handleDeleteRoom} className="delete-room-btn">刪除房間</button>
+          {isAdmin && <button onClick={handleDeleteRoom} className="delete-room-btn">刪除房間</button>}
         </div>
       </div>
       
@@ -254,7 +276,17 @@ const GameRoom = () => {
       {connected ? (
         <>
           <GameStatus socket={socket} />
-          
+          <div className="game-controls">
+                { !isPrepared ? (
+                  <button 
+                    onClick={handlePrepare}
+                    className="prepare-btn"
+                  >
+                    準備
+                  </button>
+                ) : null}
+          </div>  
+
           {isPrepared && (
             <>
               <Scoreboard socket={socket} />
@@ -265,7 +297,18 @@ const GameRoom = () => {
                 isPrepared={isPrepared} 
                 isGameStarted={isGameStarted} 
               />
-              
+              <div className="game-controls">    
+                { !isGameStarted ? (
+                  isAdmin && (
+                    <button 
+                      onClick={handleStartGame}
+                      className="start-game-btn"
+                    >
+                      遊戲開始
+                    </button>
+                  )
+                ) : null}
+              </div>
               {/* 剩餘牌數顯示 */}
               {!isGameStarted && <RemainingCards 
                 playerCount={playerCount} 
@@ -274,7 +317,7 @@ const GameRoom = () => {
             </>
           )}
           
-          <div className="game-controls">
+          {/* <div className="game-controls">
             {!isPrepared ? (
               <button 
                 onClick={handlePrepare}
@@ -283,14 +326,16 @@ const GameRoom = () => {
                 準備
               </button>
             ) : !isGameStarted ? (
-              <button 
-                onClick={handleStartGame}
-                className="start-game-btn"
-              >
-                遊戲開始
-              </button>
+              isAdmin && (
+                <button 
+                  onClick={handleStartGame}
+                  className="start-game-btn"
+                >
+                  遊戲開始
+                </button>
+              )
             ) : null}
-          </div>
+          </div> */}
           
           <ChatBox socket={socket} />
         </>

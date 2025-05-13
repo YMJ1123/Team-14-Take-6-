@@ -208,14 +208,26 @@ class GameConsumer(AsyncWebsocketConsumer):
 
                 print(f"Player {username} is now {'ready' if is_ready else 'not ready'}")
 
+                # 檢查用戶是否為房主
+                is_admin = await self.check_user_is_admin()
+                
+                # 發送準備狀態更新和房主資訊給房間內所有人
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'player_ready_state',
                         'username': username,
-                        'is_ready': is_ready
+                        'is_ready': is_ready,
+                        'is_admin': is_admin, # 新增房主信息
+                        'user_id': self.user.id # 新增用戶ID方便前端識別
                     }
                 )
+                # 同時直接回傳給請求的用戶，確保他立刻收到房主資訊
+                await self.send(text_data=json.dumps({
+                    'type': 'admin_check',
+                    'is_admin': is_admin,
+                    'username': username
+                }))
                 return
             
             elif message_type == 'play_card':
@@ -401,7 +413,9 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'player_ready_state',
             'username': event['username'],
-            'is_ready': event['is_ready']
+            'is_ready': event['is_ready'],
+            'is_admin': event.get('is_admin', False),  # 新增房主信息
+            'user_id': event.get('user_id', None)
         }))
     
     @database_sync_to_async

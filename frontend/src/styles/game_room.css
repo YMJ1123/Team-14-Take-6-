@@ -254,3 +254,23 @@ input[type="text"] {
 .music-btn:hover {
     background-color: #8e44ad;
 }
+
+/* 添加房主標誌樣式 */
+.admin-badge {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 1.2em;
+  vertical-align: middle;
+  animation: crown-glow 2s infinite alternate;
+}
+
+@keyframes crown-glow {
+  from {
+    text-shadow: 0 0 2px gold, 0 0 4px gold;
+    transform: scale(1);
+  }
+  to {
+    text-shadow: 0 0 8px gold, 0 0 10px gold;
+    transform: scale(1.1);
+  }
+}
