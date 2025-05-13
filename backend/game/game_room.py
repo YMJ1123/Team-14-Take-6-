@@ -1,4 +1,5 @@
 from game_logic.core import GameState
+from collections import OrderedDict
 
 # 全局字典，用於保存所有活躍的遊戲房間
 active_rooms = {}
@@ -10,13 +11,48 @@ class GameRoom:
         self.name = room_name
         self.game_state = None  # 遊戲狀態，初始為空
         self.connected_players = set()  # 使用集合存儲連接到該房間的用戶ID
+        self.played_cards = {}  # 記錄已出牌的玩家和對應的卡牌索引
+        self.round_results = []  # 儲存本輪出牌的結果
+        self.player_indices = OrderedDict()  # 記錄玩家ID到索引的映射
     
     def initialize_game_state(self, player_count):
         """初始化房間的遊戲狀態（確保只初始化一次）"""
         if self.game_state is None:
             print(f"房間 {self.name} 初始化 GameState，玩家數: {player_count}")
             self.game_state = GameState(player_count)
+            self.played_cards = {}  # 重置已出牌記錄
+            self.round_results = []  # 重置回合結果
+            # 初始化玩家索引的順序，這需要在遊戲開始時確定並固定
+            self._initialize_player_indices()
         return self.game_state
+    
+    def _initialize_player_indices(self):
+        """初始化玩家索引，將當前連接的玩家按順序分配索引"""
+        self.player_indices = OrderedDict()
+        for idx, player_id in enumerate(sorted(self.connected_players)):
+            self.player_indices[player_id] = idx
+        print(f"已初始化玩家索引映射: {self.player_indices}")
+    
+    def get_player_index(self, player_id):
+        """獲取玩家在房間中的索引"""
+        if player_id in self.player_indices:
+            return self.player_indices[player_id]
+        
+        # 如果玩家不在映射中（例如，遊戲開始後加入的玩家），為其分配一個新索引
+        if len(self.player_indices) < len(self.connected_players):
+            new_index = len(self.player_indices)
+            self.player_indices[player_id] = new_index
+            return new_index
+        
+        # 如果無法分配索引，返回None
+        return None
+    
+    def get_player_by_index(self, index):
+        """根據索引獲取玩家ID"""
+        for player_id, idx in self.player_indices.items():
+            if idx == index:
+                return player_id
+        return None
     
     def has_game_state(self):
         """檢查房間是否已經初始化了遊戲狀態"""
@@ -32,10 +68,90 @@ class GameRoom:
         if user_id in self.connected_players:
             self.connected_players.remove(user_id)
             print(f"玩家 {user_id} 離開房間 {self.name}，剩餘玩家數: {len(self.connected_players)}")
+            # 如果玩家已出牌，也需要移除
+            if user_id in self.played_cards:
+                del self.played_cards[user_id]
+            # 也需要從玩家索引映射中移除
+            if user_id in self.player_indices:
+                del self.player_indices[user_id]
     
     def get_player_count(self):
         """獲取當前房間的玩家數量"""
         return len(self.connected_players)
+    
+    def record_played_card(self, player_id, card_idx, card_value):
+        """記錄玩家出的牌，同時記錄卡牌索引和值"""
+        self.played_cards[player_id] = {
+            'value': card_value,
+            'idx': card_idx
+        }
+        print(f"玩家 {player_id} 在房間 {self.name} 中出了數字 {card_value}，索引 {card_idx}")
+        return self.are_all_players_played()
+    
+    def are_all_players_played(self):
+        """檢查是否所有玩家都已出牌"""
+        if not self.has_game_state():
+            return False
+            
+        # 檢查已出牌的玩家數是否等於遊戲中的玩家數
+        active_players = len(self.connected_players)
+        played_count = len(self.played_cards)
+        
+        print(f"房間 {self.name} 中已有 {played_count}/{active_players} 名玩家出牌")
+        return played_count >= active_players and active_players > 0
+    
+    def process_played_cards(self):
+        """處理所有已出牌，並返回結果"""
+        if not self.are_all_players_played():
+            return None
+            
+        results = []
+        # 收集所有玩家的出牌信息，包括卡牌值
+        cards_to_process = []
+        print("self.played_cards: ", self.played_cards)
+        
+        for player_id, card_info in self.played_cards.items():
+            # 獲取玩家在遊戲中的索引
+            player_index = self.get_player_index(player_id)
+            
+            if player_index is None:
+                print(f"警告: 無法找到玩家 {player_id} 的索引")
+                continue
+            
+            cards_to_process.append({
+                'player_id': player_id,
+                'player_index': player_index,
+                'card_value': card_info['value'],
+                'card_idx': card_info['idx']
+            })
+        
+        # 按照卡牌值從小到大排序
+        cards_to_process.sort(key=lambda card: card['card_value'])
+        print(f"按卡牌值排序後的出牌順序: {[card['card_value'] for card in cards_to_process]}")
+        
+        # 按照排序後的順序處理出牌
+        for card_info in cards_to_process:
+            player_id = card_info['player_id']
+            player_index = card_info['player_index']
+            card_value = card_info['card_value']
+            card_idx = card_info['card_idx']
+            
+            # 調用遊戲邏輯處理出牌，使用玩家索引而不是絕對ID
+            result = self.game_state.play_card(player_index, card_idx)
+            print(f"玩家 {player_id} (索引 {player_index}) 出牌 {card_value} (索引 {card_idx}) 結果: {result}")
+            
+            results.append({
+                'player_id': player_id,
+                'player_index': player_index,
+                'card_value': card_value,
+                'card_idx': card_idx,
+                'result': result
+            })
+            
+        # 儲存結果並清空已出牌記錄（準備下一輪）
+        self.round_results = results
+        self.played_cards = {}
+        return results
     
     @staticmethod
     def get_room(room_name):

@@ -214,32 +214,59 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       
       // 處理出牌確認 - 其他玩家出牌不會影響我們的手牌
       if (data.type === "card_played") {
-        console.log("有玩家出牌:", data);
+        console.log("收到卡牌出牌消息:", data);
+        console.log("當前玩家ID:", playerId);
         
-        // 檢查是否是其他玩家出的牌
-        const isOtherPlayer = data.player_id !== playerId;
+        // 檢查是否是其他玩家出的牌 - 只需檢查sender_id是否不等於自己的playerId
+        const isOtherPlayer = data.sender_id !== playerId;
+        
+        console.log(`是否為其他玩家出的牌: ${isOtherPlayer} (sender_id=${data.sender_id}, playerId=${playerId})`);
         
         // 只有在確實是其他玩家出的牌時才添加到翻牌區域
         if (isOtherPlayer) {
-          // 創建一個臨時的牌對象，用於顯示其他玩家的牌（背面）
+          // 創建一個臨時的牌對象，用於顯示其他玩家的牌
           const tempCard = {
             player_name: data.player_name || data.player_username || "其他玩家",
-            player_id: data.player_id,
-            isOtherPlayer: true  // 標記這是其他玩家的牌
+            player_id: data.player_id || data.sender_id, // 優先使用player_id，如果沒有則使用sender_id
+            player_idx: data.player_idx,
+            isOtherPlayer: true,  // 標記這是其他玩家的牌
+            value: data.card_value || 0,  // 保存牌值（雖然暫時不顯示）
+            bull_heads: data.bull_heads || 0  // 保存牛頭數（雖然暫時不顯示）
           };
           
-          // 將其他玩家出的牌（背面）添加到翻牌區
+          console.log("添加其他玩家出的牌到翻牌區:", tempCard);
+          
+          // 將其他玩家出的牌添加到翻牌區
           setFlippedCards(prev => {
             // 過濾掉已存在的同玩家牌，避免重複
             const filtered = prev.filter(card => 
               !card.player_id || card.player_id !== tempCard.player_id
             );
-            return [...filtered, tempCard];
+            const newCards = [...filtered, tempCard];
+            console.log("更新後的翻牌區:", newCards);
+            return newCards;
           });
         } else {
-          // 如果是自己出的牌，我們已經在本地顯示了，不需要重複添加 problem
+          // 如果是自己出的牌，我們已經在本地顯示了，不需要重複添加
           console.log("收到自己出牌的廣播，忽略");
         }
+      }
+      
+      // 處理回合完成的消息（所有玩家都已出牌）
+      if (data.type === "round_completed") {
+        console.log("回合完成，所有玩家已出牌:", data);
+        
+        // 更新牌桌
+        if (data.board) {
+          setBoard(data.board);
+        }
+        
+        // 清空同時出牌區域
+        setFlippedCards([]);
+        setIsFlipping(false);
+        setPlayedCard(null); // 重置已出牌狀態
+        
+        console.log("牌桌更新完成，翻牌區已清空");
       }
       
       // 更新玩家資訊和玩家ID
@@ -342,7 +369,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
             <Card
               value={playedCard.value}
               bullHeads={playedCard.bull_heads}
-              isBack={true}  // 使用 isBack 屬性來顯示牌背 problem
+              isBack={false}  // 使用 isBack 屬性來顯示牌背
               isPlayed={true}
             />
             <div className="player-name">我</div>
@@ -358,6 +385,17 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         const isFromOtherPlayer = card.isOtherPlayer;
         
         if (isFromOtherPlayer) {
+          // 嘗試從玩家列表查找正確的用戶名
+          let displayName = card.player_name;
+          
+          // 如果有player_id，優先使用玩家列表中的username
+          if (card.player_id && players.length > 0) {
+            const foundPlayer = players.find(p => p.id === card.player_id);
+            if (foundPlayer) {
+              displayName = foundPlayer.username;
+            }
+          }
+          
           // 添加其他玩家的牌（背面）
           allCards.push({
             key: `other-player-${index}`,
@@ -369,7 +407,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                   isBack={true}  // 顯示牌背
                   isPlayed={true}
                 />
-                <div className="player-name">{card.player_name}</div>
+                <div className="player-name">{displayName}</div>
               </div>
             )
           });
@@ -451,14 +489,19 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     newHand.splice(selectedCard, 1);
     setHand(newHand);
     
-    // 發送出牌信息到服務器，包括更多信息 problem
+    // 獲取自己在房間中的索引
+    const myIndex = findMyPlayerIndex();
+    console.log(`出牌時我的房間索引是: ${myIndex}`);
+    
+    // 發送出牌信息到服務器
     socket.send(JSON.stringify({
       type: "play_card",
       card_idx: selectedCard,
       player_id: playerId,  // 發送自己的 ID
+      player_index: myIndex, // 發送自己在房間中的索引
       player_name: currentUser || "玩家", // 發送玩家名稱
-      value: card.value, // 發送牌值（後端可以決定是否向其他玩家揭示）
-      bull_heads: card.bull_heads // 發送牛頭數（後端可以決定是否向其他玩家揭示）
+      value: card.value, // 發送牌值
+      bull_heads: card.bull_heads // 發送牛頭數
     }));
     
     // 重置選擇狀態

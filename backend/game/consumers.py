@@ -233,8 +233,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             elif message_type == 'play_card':
                 # 玩家出牌
                 card_idx = data.get('card_idx')
-                player_id = data.get('player_id')
-                await self.handle_play_card(card_idx, player_id)
+                # player_id = data.get('player_id')
+                card_value = data.get('value', 0)
+                bull_heads = data.get('bull_heads', 0)
+                player_name = data.get('player_name', username)
+                await self.handle_play_card(card_idx, card_value, player_name)
             
             elif message_type == 'chat_message':
                 message = data.get('message')
@@ -332,7 +335,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'board': event['board']
         }))
     
-    async def handle_play_card(self, card_idx, player_id):
+    async def handle_play_card(self, card_idx, card_value, player_name):
         # 檢查遊戲是否已經開始
         if not self.game_room.has_game_state():
             await self.send(text_data=json.dumps({
@@ -342,55 +345,50 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
         
         # 獲取玩家在遊戲中的索引
-        # player_idx = await self.get_player_index()
-        # if player_idx is None:
-        #     await self.send(text_data=json.dumps({
-        #         'type': 'error',
-        #         'message': '你不是此遊戲的玩家'
-        #     }))
-        #     return
+        player_idx = await self.get_player_index()
         
-        # 如果提供了 player_id，可以在這裡使用它
-        if player_id:
-            # 進行任何需要 player_id 的操作
-            print(f"收到前端傳來的 player_id: {player_id}")
-        
-        # 執行遊戲邏輯處理出牌
         try:
-            # result = self.game_room.game_state.play_card(player_id, card_idx)
+            # 記錄玩家出牌 - 使用玩家的資料庫 ID、卡牌索引和卡牌值
+            all_played = self.game_room.record_played_card(self.user.id, card_idx, card_value)
             
-            # 通知所有玩家有人出牌
+            # 向所有玩家(包括自己)廣播出牌訊息
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'card_played',
                     'player_username': self.user.username,
+                    'player_name': player_name,
                     'card_idx': card_idx,
-                    # 'player_id': player_id,
+                    'card_value': card_value,
                     'sender_id': self.user.id,  # 標記發送者ID用於排除
-                    # 'result': result
+                    'player_idx': player_idx
                 }
             )
             
-            # 更新牌桌 - 這個仍然發送給所有人
-            updated_board = []
-            for row in self.game_room.game_state.board_rows:
-                row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
-                updated_board.append(row_cards)
-            
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'update_board',
-                    'board': updated_board
-                }
-            )
-            
-            
-            # 檢查是否所有玩家都已出牌
-            # 如果是這一輪的最後一張牌，則進行遊戲狀態更新
-            result = self.game_room.game_state.play_card(player_id, card_idx)
-
+            # 如果所有玩家都已出牌，進行遊戲邏輯處理
+            if all_played:
+                print("所有玩家都已出牌，處理遊戲邏輯")
+                # 處理所有已出牌，這裡會使用玩家索引而不是絕對ID，並按照卡牌值排序
+                results = self.game_room.process_played_cards()
+                
+                if results:
+                    # 更新牌桌
+                    updated_board = []
+                    for row in self.game_room.game_state.board_rows:
+                        row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
+                        updated_board.append(row_cards)
+                    
+                    # 廣播遊戲結果 - 包含玩家索引、卡牌值等信息
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'round_completed',
+                            'results': results,
+                            'board': updated_board
+                        }
+                    )
+                else:
+                    print("處理出牌結果為空")
             
         except Exception as e:
             await self.send(text_data=json.dumps({
@@ -401,19 +399,35 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def card_played(self, event):
         # 如果自己是發送者，不發送此消息
         if event.get('sender_id') == self.user.id:
+            print(f"忽略向發送者 {self.user.id} 自己發送出牌消息")
             return
             
-        # 轉發給非發送者的玩家
-        await self.send(text_data=json.dumps({
-            'type': 'card_played',
-            # 'player_idx': event['player_idx'],
-            'player_username': event['player_username'],
-            'card_idx': event['card_idx'],
-            # 'player_id': event['player_id'],
-            # 'result': event.get('result')
-        }))
+        print(f"從發送者 {event.get('sender_id')} 收到出牌消息，準備轉發給用戶 {self.user.id}")
+        print(f"消息內容: {event}")
         
-
+        # 轉發給非發送者的玩家
+        message = {
+            'type': 'card_played',
+            'player_username': event['player_username'],
+            'card_value': event.get('card_value', 0),  # 添加卡牌值
+            'bull_heads': event.get('bull_heads', 0),  # 添加牛頭數
+            'player_name': event.get('player_name'),
+            'player_id': event.get('sender_id'),  # 添加發送者ID作為玩家ID
+            'player_idx': event.get('player_idx'),  # 添加玩家索引
+            'sender_id': event.get('sender_id')  # 確保sender_id也被傳遞
+        }
+        
+        print(f"轉發消息: {message}")
+        
+        await self.send(text_data=json.dumps(message))
+    
+    async def round_completed(self, event):
+        """處理一輪出牌結束後的結果廣播"""
+        await self.send(text_data=json.dumps({
+            'type': 'round_completed',
+            'results': event['results'],
+            'board': event['board']
+        }))
     
     async def room_info(self, event):
         await self.send(text_data=json.dumps({
