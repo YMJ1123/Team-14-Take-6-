@@ -17,7 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
-from game.views import RoomViewSet, GameSessionViewSet, PlayerViewSet, index
+from game.views import RoomViewSet, GameSessionViewSet, PlayerViewSet, home #, index
 from django.views.generic import TemplateView
 
 router = routers.DefaultRouter()
@@ -26,10 +26,17 @@ router.register(r'games', GameSessionViewSet)
 router.register(r'players', PlayerViewSet)
 
 urlpatterns = [
-    path('', index, name='index'),  # 提供前端應用的入口點
+    # 根路由，顯示歡迎頁面
+    path('', home, name='home'),
+        
     path('admin/', admin.site.urls),
+
+    # API 路由：React 將會呼叫這些網址
     path('api/', include(router.urls)),
+
+    # REST framework 自帶登入 (可選)
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    
     # 新增遊戲房間頁面路由
     path('game/<str:room_name>/', TemplateView.as_view(template_name='game_room.html'), name='game_room'),
 ]

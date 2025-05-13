@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from rest_framework import viewsets, permissions, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Room, GameSession, Player
@@ -10,19 +10,32 @@ from .serializers import RoomSerializer, GameSessionSerializer, PlayerSerializer
 def home(request):
     return HttpResponse("Welcome to Take 6! Online Game API")
 
-def index(request):
-    # 如果是表單提交，創建新房間並重定向
-    if request.method == 'POST':
-        room_name = request.POST.get('room_name')
-        if room_name:
-            room, created = Room.objects.get_or_create(name=room_name)
-            return redirect('game_room', room_name=room_name)
+@api_view(['GET', 'POST'])
+def room_list(request):
+    if request.method == 'GET':
+        rooms = Room.objects.all().order_by('-created_at')
+        serializer = RoomSerializer(rooms, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = RoomSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# def index(request):
+#     # 如果是表單提交，創建新房間並重定向
+#     if request.method == 'POST':
+#         room_name = request.POST.get('room_name')
+#         if room_name:
+#             room, created = Room.objects.get_or_create(name=room_name)
+#             return redirect('game_room', room_name=room_name)
     
-    # 獲取活躍的房間列表
-    active_rooms = Room.objects.filter(active=True)
+#     # 獲取活躍的房間列表
+#     active_rooms = Room.objects.filter(active=True)
     
-    # 傳遞房間列表到模板
-    return render(request, 'index.html', {'rooms': active_rooms})
+#     # 傳遞房間列表到模板
+#     return render(request, 'index.html', {'rooms': active_rooms})
 
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.filter(active=True)

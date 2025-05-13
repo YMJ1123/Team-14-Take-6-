@@ -1,0 +1,276 @@
+body {
+    font-family: 'Microsoft JhengHei', Arial, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f5f5f5;
+}
+h1, h2 {
+    color: #2c3e50;
+}
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.room-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.room-header h1 {
+    margin: 0;
+    flex: 1;
+}
+
+.room-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.back-btn, .delete-room-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+}
+
+.back-btn {
+    background-color: #3498db;
+    color: white;
+}
+
+.delete-room-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.back-btn:hover {
+    background-color: #2980b9;
+}
+
+.delete-room-btn:hover {
+    background-color: #c0392b;
+}
+
+.game-controls {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.prepare-btn, .start-game-btn {
+    padding: 12px 30px;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.prepare-btn {
+    background-color: #3498db;
+}
+
+.start-game-btn {
+    background-color: #2ecc71;
+}
+
+.prepare-btn:hover {
+    background-color: #2980b9;
+}
+
+.start-game-btn:hover {
+    background-color: #27ae60;
+}
+
+.connection-status {
+    text-align: center;
+    margin-top: 30px;
+}
+
+.connection-error {
+    margin-top: 20px;
+    color: #e74c3c;
+    background-color: #fadbd8;
+    padding: 15px;
+    border-radius: 4px;
+    text-align: left;
+}
+
+.retry-btn {
+    margin-top: 10px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.retry-btn:hover {
+    background-color: #2980b9;
+}
+
+.my-hand-container {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.my-hand-container h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #2c3e50;
+    text-align: center;
+}
+
+.empty-hand {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 120px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    color: #777;
+    font-style: italic;
+}
+
+#gameBoard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+.board-row {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #fff;
+}
+.card {
+    border: 1px solid #2c3e50;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px;
+    text-align: center;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.card.played {
+    background-color: #f9f9f9;
+}
+#playerHand {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+#playerHand .card {
+    cursor: pointer;
+}
+#playerHand .card:hover {
+    background-color: #f0f8ff;
+}
+#chatContainer {
+    margin-top: 20px;
+}
+#chatMessages {
+    border: 1px solid #ccc;
+    height: 200px;
+    overflow-y: scroll;
+    padding: 10px;
+    background-color: white;
+    margin-bottom: 10px;
+}
+#playerList {
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: white;
+    margin-bottom: 20px;
+}
+.controls {
+    margin-top: 20px;
+}
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #2980b9;
+}
+input[type="text"] {
+    padding: 10px;
+    margin-right: 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 300px;
+}
+
+.music-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    background-color: #9b59b6;
+    color: white;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.music-btn:before {
+    content: "♪";
+    margin-right: 5px;
+    font-size: 1.2rem;
+}
+
+.music-btn.playing {
+    background-color: #8e44ad;
+}
+
+.music-btn.playing:before {
+    content: "♫";
+}
+
+.music-btn:hover {
+    background-color: #8e44ad;
+}
+
+/* 添加房主標誌樣式 */
+.admin-badge {
+  display: inline-block;
+  margin-left: 10px;
+  font-size: 1.2em;
+  vertical-align: middle;
+  animation: crown-glow 2s infinite alternate;
+}
+
+@keyframes crown-glow {
+  from {
+    text-shadow: 0 0 2px gold, 0 0 4px gold;
+    transform: scale(1);
+  }
+  to {
+    text-shadow: 0 0 8px gold, 0 0 10px gold;
+    transform: scale(1.1);
+  }
+}
