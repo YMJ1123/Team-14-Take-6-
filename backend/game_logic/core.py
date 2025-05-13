@@ -12,10 +12,10 @@ class GameState:
         # 創建並洗牌
         self.deck = create_deck()
         random.shuffle(self.deck)
-        print("deck:")
-        for i in range(len(self.deck)):
-            d = self.deck[i]
-            print(d.value, end=' ')###
+        # print("deck:")
+        # for i in range(len(self.deck)):
+        #     d = self.deck[i]
+        #     print(d.value, end=' ')###
         # 先為所有玩家分配手牌，確保每位玩家的牌不重複
         self.player_hands = []
         used_card_values = set()  # 用於追踪已分配的牌值
@@ -38,11 +38,11 @@ class GameState:
                     used_card_values.add(card.value)  # 標記此牌值為已使用
             
             self.player_hands.append(hand)
-        print("player_hands:")
-        for i in range(len(self.player_hands)):
-            for j in range(len(self.player_hands[i])):
-                p = self.player_hands[i][j]
-                print(p.value, end=' ') ###
+        # print("player_hands:")
+        # for i in range(len(self.player_hands)):
+        #     for j in range(len(self.player_hands[i])):
+        #         p = self.player_hands[i][j]
+        #         print(p.value, end=' ') ###
         # 為牌桌分配4張初始牌，確保與玩家手牌不重複
         deck_index = player_count*10
         for i in range(4):
@@ -52,18 +52,18 @@ class GameState:
             card_copy = Card(card.value)  # 創建一個新的卡牌對象
             self.board_rows[i].append(card_copy)
             used_card_values.add(card.value)  # 標記此牌值為已使用
-        print("board_rows:")
-        for i in range(len(self.board_rows)):
-            b = self.board_rows[i]
-            for j in range(len(b)):
-                print(b[j].value, end=' ') ###
+        # print("board_rows:")
+        # for i in range(len(self.board_rows)):
+        #     b = self.board_rows[i]
+        #     for j in range(len(b)):
+        #         print(b[j].value, end=' ') ###
         # 更新剩餘牌組：移除所有已分配的牌
         # self.deck = [card for card in self.deck if card.value not in used_card_values]
         self.deck = self.deck[(deck_index):]
-        print("deck:")
-        for i in range(len(self.deck)):
-            d = self.deck[i]
-            print(d.value, end=' ')###
+        # print("deck:")
+        # for i in range(len(self.deck)):
+        #     d = self.deck[i]
+        #     print(d.value, end=' ')###
     
     def find_closest_row(self, card):
         """找出與卡牌最接近的行"""
