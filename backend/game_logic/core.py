@@ -96,7 +96,9 @@ class GameState:
         """
         if player_idx < 0 or player_idx >= self.player_count:
             raise ValueError(f"玩家索引 {player_idx} 超出範圍")
-        
+        if player_idx >= len(self.player_hands):
+            print(f"[錯誤] player_idx: {player_idx} 超過 player_hands 長度: {len(self.player_hands)}")
+            return None  # 或 raise Exception("Player not found")
         player_hand = self.player_hands[player_idx]
         
         if card_idx < 0 or card_idx >= len(player_hand):
@@ -154,6 +156,15 @@ class GameState:
         
         # 每位玩家都出一張卡牌
         for player_idx in range(self.player_count):
+
+            if player_idx >= len(self.player_hands):
+                print(f"[錯誤] 要出牌的 player_idx: {player_idx} 不存在於 player_hands 中")
+                return None  # 或 raise Exception("Invalid player")
+
+            if not self.player_hands[player_idx]:
+                print(f"[警告] player {player_idx} 沒有手牌可出")
+                return None
+
             # 每位玩家從手牌中選擇一張卡牌出牌
             card = self.player_hands[player_idx].pop(0)  # 假設從手牌中取出第一張卡
             card.owner = player_idx  # 確保卡牌屬於該玩家
