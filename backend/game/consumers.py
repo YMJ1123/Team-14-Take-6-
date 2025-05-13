@@ -233,7 +233,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             elif message_type == 'play_card':
                 # 玩家出牌
                 card_idx = data.get('card_idx')
-                await self.handle_play_card(card_idx)
+                player_id = data.get('player_id')
+                await self.handle_play_card(card_idx, player_id)
             
             elif message_type == 'chat_message':
                 message = data.get('message')
@@ -331,7 +332,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'board': event['board']
         }))
     
-    async def handle_play_card(self, card_idx):
+    async def handle_play_card(self, card_idx, player_id):
         # 檢查遊戲是否已經開始
         if not self.game_room.has_game_state():
             await self.send(text_data=json.dumps({
@@ -341,36 +342,39 @@ class GameConsumer(AsyncWebsocketConsumer):
             return
         
         # 獲取玩家在遊戲中的索引
-        player_idx = await self.get_player_index()
-        if player_idx is None:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': '你不是此遊戲的玩家'
-            }))
-            return
+        # player_idx = await self.get_player_index()
+        # if player_idx is None:
+        #     await self.send(text_data=json.dumps({
+        #         'type': 'error',
+        #         'message': '你不是此遊戲的玩家'
+        #     }))
+        #     return
         
-        # 獲取共享的 GameState 實例
-        game_state = self.game_room.game_state
+        # 如果提供了 player_id，可以在這裡使用它
+        if player_id:
+            # 進行任何需要 player_id 的操作
+            print(f"收到前端傳來的 player_id: {player_id}")
         
         # 執行遊戲邏輯處理出牌
         try:
-            result = game_state.play_card(player_idx, card_idx)
+            # result = self.game_room.game_state.play_card(player_id, card_idx)
             
             # 通知所有玩家有人出牌
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'card_played',
-                    'player_idx': player_idx,
                     'player_username': self.user.username,
                     'card_idx': card_idx,
-                    'result': result
+                    # 'player_id': player_id,
+                    'sender_id': self.user.id,  # 標記發送者ID用於排除
+                    # 'result': result
                 }
             )
             
-            # 更新牌桌
+            # 更新牌桌 - 這個仍然發送給所有人
             updated_board = []
-            for row in game_state.board_rows:
+            for row in self.game_room.game_state.board_rows:
                 row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
                 updated_board.append(row_cards)
             
@@ -382,9 +386,11 @@ class GameConsumer(AsyncWebsocketConsumer):
                 }
             )
             
+            
             # 檢查是否所有玩家都已出牌
             # 如果是這一輪的最後一張牌，則進行遊戲狀態更新
-            # 這部分邏輯需要根據遊戲規則進行調整
+            result = self.game_room.game_state.play_card(player_id, card_idx)
+
             
         except Exception as e:
             await self.send(text_data=json.dumps({
@@ -393,13 +399,21 @@ class GameConsumer(AsyncWebsocketConsumer):
             }))
     
     async def card_played(self, event):
+        # 如果自己是發送者，不發送此消息
+        if event.get('sender_id') == self.user.id:
+            return
+            
+        # 轉發給非發送者的玩家
         await self.send(text_data=json.dumps({
             'type': 'card_played',
-            'player_idx': event['player_idx'],
+            # 'player_idx': event['player_idx'],
             'player_username': event['player_username'],
             'card_idx': event['card_idx'],
-            'result': event['result']
+            # 'player_id': event['player_id'],
+            # 'result': event.get('result')
         }))
+        
+
     
     async def room_info(self, event):
         await self.send(text_data=json.dumps({
