@@ -29,6 +29,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [showConfirmButton, setShowConfirmButton] = useState(false);
   // 當前用戶名
   const [currentUser, setCurrentUser] = useState("");
+  // 新增：用於存儲需要選擇的列和牛頭數
+  const [choosingRows, setChoosingRows] = useState([]);
+  // 新增：等待選擇的玩家名
+  const [waitingPlayer, setWaitingPlayer] = useState(null);
   
   // 生成完整牌組 - 固定順序的牌組，所有玩家都用這個順序
   const generateDeck = () => {
@@ -251,10 +255,55 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
           console.log("收到自己出牌的廣播，忽略");
         }
       }
+      // 處理收哪排的消息
+      if (data.type === "i_choose_row") {
+        console.log("我要選則收某排牌", data);
+        // 設置需要選擇的列和每列對應的牛頭數
+        const rowBullHeads = [];
+        // 獲取每列的牛頭數
+        for (let i = 0; i < board.length; i++) {
+          let rowBulls = 0;
+          board[i].forEach(card => {
+            if (card && card.bull_heads) {
+              rowBulls += card.bull_heads;
+            }
+          });
+          rowBullHeads.push(rowBulls);
+        }
+        setChoosingRows(rowBullHeads);
+        // 清除等待狀態
+        setWaitingPlayer(null);
+      }
       
+      if (data.type === "wait_choose_card") {
+        console.log("等待某玩家收某排牌", data);
+        // 設置等待的玩家名
+        if (data.player_name) {
+          setWaitingPlayer(data.player_name);
+        } else {
+          // 如果沒有直接提供名字，嘗試從 player_id 獲取
+          if (data.player_id && players.length > 0) {
+            const player = players.find(p => p.id === data.player_id);
+            if (player) {
+              setWaitingPlayer(player.username);
+            } else {
+              setWaitingPlayer("某玩家");
+            }
+          } else {
+            setWaitingPlayer("某玩家");
+          }
+        }
+        // 清除選擇狀態
+        setChoosingRows([]);
+      }
+
       // 處理回合完成的消息（所有玩家都已出牌）
       if (data.type === "round_completed") {
         console.log("回合完成，所有玩家已出牌:", data);
+        
+        // 清除選擇和等待狀態
+        setChoosingRows([]);
+        setWaitingPlayer(null);
         
         // 更新牌桌
         if (data.board) {
@@ -336,7 +385,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     };
   }, [socket, isGameStarted, playerId, players]);
 
-  // 創建空的牌位
+  // 修改 createEmptyCardSlots 函數以顯示牛頭數
   const createEmptyCardSlots = (rowIndex) => {
     const slots = [];
     for (let i = 0; i < 6; i++) {
@@ -353,10 +402,47 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         </div>
       );
     }
+    
+    // 如果當前行需要選擇，顯示牛頭數
+    if (choosingRows.length > 0 && rowIndex < choosingRows.length) {
+      return (
+        <React.Fragment>
+          {slots}
+          <div className="row-bull-heads-container">
+            <div className="row-bull-heads">
+              <img src="/images/bull-head-icon.png" alt="Bull" className="bull-icon" />
+              <span className="bull-count">{choosingRows[rowIndex]}</span>
+            </div>
+            <button 
+              className="choose-row-btn"
+              onClick={() => handleChooseRow(rowIndex)}
+            >
+              選擇此列
+            </button>
+          </div>
+        </React.Fragment>
+      );
+    }
+    
     return slots;
   };
   
-  // 渲染翻牌區域
+  // 添加選擇列的處理函數
+  const handleChooseRow = (rowIndex) => {
+    // 發送選擇的列到服務器
+    if (socket) {
+      socket.send(JSON.stringify({
+        type: "choose_row_response",
+        row_index: rowIndex,
+        player_id: playerId
+      }));
+      
+      // 清除選擇狀態
+      setChoosingRows([]);
+    }
+  };
+
+  // 修改 renderFlipArea 函數以顯示等待覆蓋層
   const renderFlipArea = () => {
     const allCards = [];
     
@@ -430,13 +516,27 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       });
     }
     
+    // 等待選擇的覆蓋層
+    const waitingOverlay = waitingPlayer ? (
+      <div className="waiting-overlay">
+        <div className="waiting-message">
+          <span className="waiting-player">{waitingPlayer}</span> 正在選擇要收哪排
+        </div>
+      </div>
+    ) : null;
+    
     // 如果有牌要顯示，渲染它們
     if (allCards.length > 0) {
-      return allCards.map(item => (
-        <React.Fragment key={item.key}>
-          {item.element}
-        </React.Fragment>
-      ));
+      return (
+        <div className="flip-area-content">
+          {allCards.map(item => (
+            <React.Fragment key={item.key}>
+              {item.element}
+            </React.Fragment>
+          ))}
+          {waitingOverlay}
+        </div>
+      );
     }
     
     // 如果正在翻牌過程中
@@ -444,6 +544,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       return (
         <div className="waiting-message">
           翻牌中...
+          {waitingOverlay}
         </div>
       );
     }
@@ -452,6 +553,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     return (
       <div className="waiting-message">
         請選擇一張牌出牌
+        {waitingOverlay}
       </div>
     );
   };

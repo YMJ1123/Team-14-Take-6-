@@ -112,21 +112,11 @@ class GameState:
         
         # 如果找不到合適的行，玩家必須選擇一個行收集
         if row_idx is None:
-            bull_heads = [sum(card.bull_heads for card in row) for row in self.board_rows]
-            row_idx = bull_heads.index(min(bull_heads))
-            
-            # 收集牛頭
-            collected_bull_heads = sum(card.bull_heads for card in self.board_rows[row_idx])
-            
-            # 清空該行並放入新牌
-            self.board_rows[row_idx] = [card]
+            # 將卡牌放回手牌，等待玩家選擇
+            player_hand.insert(card_idx, card)
             
             return {
-                'player': player_idx,
-                'action': 'collect',
-                'row': row_idx,
-                'bull_heads': collected_bull_heads,
-                'card': {'value': card.value, 'bull_heads': card.bull_heads}
+                'action': 'choose_row'
             }
         else:
             # 如果該行已有5張牌，則收集牛頭
@@ -134,7 +124,7 @@ class GameState:
                 collected_bull_heads = sum(card.bull_heads for card in self.board_rows[row_idx])
                 self.board_rows[row_idx] = [card]
                 return {
-                    'player': player_idx,
+                    'player_id': player_idx,
                     'action': 'collect',
                     'row': row_idx,
                     'bull_heads': collected_bull_heads,
@@ -143,12 +133,50 @@ class GameState:
             else:
                 self.board_rows[row_idx].append(card)
                 return {
-                    'player': player_idx,
+                    'player_id': player_idx,
                     'action': 'place',
                     'row': row_idx,
                     'card': {'value': card.value, 'bull_heads': card.bull_heads}
                 }
-    
+
+    def resume_from_choose_row(self, player_idx, card_idx, row_idx):
+        """處理玩家選擇的列
+        
+        參數:
+            player_idx: 玩家索引
+            card_idx: 玩家手牌中的卡牌索引
+            row_idx: 玩家選擇的列索引
+            
+        返回:
+            dict: 含有操作結果的字典
+        """
+        if player_idx < 0 or player_idx >= self.player_count:
+            raise ValueError(f"玩家索引 {player_idx} 超出範圍")
+        
+        player_hand = self.player_hands[player_idx]
+        
+        if card_idx < 0 or card_idx >= len(player_hand):
+            raise ValueError(f"卡牌索引 {card_idx} 超出該玩家手牌範圍")
+        
+        if row_idx < 0 or row_idx >= len(self.board_rows):
+            raise ValueError(f"列索引 {row_idx} 超出範圍")
+        
+        # 取出玩家選擇的卡牌
+        card = player_hand.pop(card_idx)
+        
+        # 收集牛頭
+        collected_bull_heads = sum(card.bull_heads for card in self.board_rows[row_idx])
+        
+        # 清空該行並放入新牌
+        self.board_rows[row_idx] = [card]
+        
+        return {
+            'player_id': player_idx,
+            'action': 'collect',
+            'row': row_idx,
+            'bull_heads': collected_bull_heads,
+            'card': {'value': card.value, 'bull_heads': card.bull_heads}
+        }
     def play_round(self):
         """同時讓四位玩家出牌並依照卡牌數字排序"""
         played_cards = []  # 存放所有玩家出的卡牌

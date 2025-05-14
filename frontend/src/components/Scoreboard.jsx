@@ -39,7 +39,7 @@ const Scoreboard = ({ socket }) => {
             ...player,
             // 新玩家默認為未準備狀態
             is_ready: player.is_ready === true ? true : false,
-            score: player.score || 0
+            score: player.score || 66
           }));
           setPlayers(updatedPlayers);
         } else {
