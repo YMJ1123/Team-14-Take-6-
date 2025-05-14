@@ -7,7 +7,7 @@ class GameState:
     def __init__(self, player_count):
         self.player_count = player_count
         self.board_rows = [[] for _ in range(4)]  # 4列牌桌
-        self.round = 0  # 總共會有10round
+        self.round = 1  # 總共會有10round
         
         # 創建並洗牌
         self.deck = create_deck()

@@ -91,7 +91,15 @@ daphne -p 8000 take6.asgi:application
     - Run python backend/manage.py migrate
 
 ## 進度
-- 0514 2326 hyc
+- 0515 0006 hyc 玩牌v3 可多輪發牌 差結束點
+    - 問題
+        - GameBoard 353處 這邊重發的時候 findMyPlayerIndex會顯示都是0 我希望可以延續跟前一輪的編號相同
+        - 現在可以發下一輪的牌了 但兩邊都拿到編號0的牌
+        - 還沒設定結束點
+
+    - 需要在選列的時候 把所有牌翻成正面
+
+- 0514 2326 hyc 玩牌v2
     - 現在陰影處還沒改成真正的玩家名稱
     - 可以玩牌、算分了
     - 問題

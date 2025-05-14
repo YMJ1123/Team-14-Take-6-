@@ -186,6 +186,35 @@ class GameConsumer(AsyncWebsocketConsumer):
                     }))
                     return
 
+            if message_type == 'request_cards_again':
+                # 獲取該玩家的手牌（從共享的 GameState 中獲取）
+                print("request_cards_again")
+                game_state = self.game_room.game_state
+                print("game_state: ", game_state)
+                print("people: ",len(game_state.player_hands))
+                player_idx = data.get('player_index', -1)
+                if player_idx < len(game_state.player_hands):
+                    hand = game_state.player_hands[player_idx]
+                    print("hand: ", hand)
+                    # 轉換成可序列化的格式
+                    hand_data = [{'value': card.value, 'bull_heads': card.bull_heads} for card in hand]
+                    
+                    # 直接向請求的玩家發送手牌
+                    await self.send(text_data=json.dumps({
+                        'type': 'cards_assigned',
+                        'cards': hand_data
+                    }))
+                    
+                    # 記錄發牌日誌
+                    print(f"已向玩家 {username} (索引 {player_idx}) 發送手牌: {[card['value'] for card in hand_data]}")
+                    return
+                else:
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': '無法找到您的手牌'
+                    }))
+                    return
+
             if message_type == 'start_game':
                 # 廣播遊戲開始消息給所有玩家
                 await self.channel_layer.group_send(
@@ -239,7 +268,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                 card_value = data.get('value', 0)
                 bull_heads = data.get('bull_heads', 0)
                 player_name = data.get('player_name', username)
-                await self.handle_play_card(card_idx, card_value, player_name)
+                await self.handle_play_card(card_idx, card_value, bull_heads, player_name)
             
             # 處理玩家選擇列的消息
             elif message_type == 'choose_row_response':
@@ -279,6 +308,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                 
                 # 所有選擇都已完成，廣播最終結果
                 if results:
+                    # 清空已處理玩家記錄（新回合重新開始）
+                    self.processed_players = set()
                     # 檢查結果是否包含需要扣分的情況（收集牛頭）
                     for result_item in results:
                         if isinstance(result_item, dict) and result_item.get('result') and result_item['result'].get('action') == 'collect':
@@ -311,7 +342,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                         row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
                         updated_board.append(row_cards)
                     
-                    # 廣播遊戲結果
+                    # 廣播遊戲結果 - 包含玩家索引、卡牌值等信息
                     await self.channel_layer.group_send(
                         self.room_group_name,
                         {
@@ -320,7 +351,36 @@ class GameConsumer(AsyncWebsocketConsumer):
                             'board': updated_board
                         }
                     )
-
+                    
+                    # 檢查出牌玩家手牌是否已用完 (手牌數為0)
+                    player_index = await self.get_player_index()
+                    if player_index is not None and player_index < len(self.game_room.game_state.player_hands):
+                        if len(self.game_room.game_state.player_hands[player_index]) == 0:
+                            print(f"玩家 {self.user.username} (ID: {self.user.id}) 手牌已用完，重新發牌...")
+                            
+                            # 獲取玩家數量
+                            player_count = self.game_room.get_player_count()
+                            
+                            # 重新初始化遊戲狀態（重置牌桌和手牌，但保留玩家分數）
+                            self.game_room.game_state = None  # 先清空現有遊戲狀態
+                            self.game_room.initialize_game_state(player_count)  # 重新創建遊戲狀態
+                            
+                            # 更新牌桌
+                            new_board = []
+                            for row in self.game_room.game_state.board_rows:
+                                row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
+                                new_board.append(row_cards)
+                            
+                            # 通知所有玩家遊戲已重置
+                            await self.channel_layer.group_send(
+                                self.room_group_name,
+                                {
+                                    'type': 'game_restarted',
+                                    'message': '遊戲已重新發牌，玩家分數保持不變',
+                                    'board': new_board
+                                }
+                            )
+            
             elif message_type == 'chat_message':
                 message = data.get('message')
                 
@@ -417,7 +477,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'board': event['board']
         }))
     
-    async def handle_play_card(self, card_idx, card_value, player_name):
+    async def handle_play_card(self, card_idx, card_value, bull_heads, player_name):
         # 檢查遊戲是否已經開始
         if not self.game_room.has_game_state():
             await self.send(text_data=json.dumps({
@@ -437,8 +497,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                 'sender_id': self.user.id,
                 'player_name': player_name,
                 'player_username': self.user.username,
-                'card_value': card_value, # 添加卡牌值
-                'bull_heads': self.game_room.played_cards[self.user.id].get('bull_heads', 0), # 添加牛頭數
+                'card_value': card_value, 
+                'bull_heads': bull_heads, 
                 'player_idx': await self.get_player_index()
             }
         )
@@ -520,22 +580,51 @@ class GameConsumer(AsyncWebsocketConsumer):
                                     }
                                 )
                 
-                # 更新牌桌
-                updated_board = []
-                for row in self.game_room.game_state.board_rows:
-                    row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
-                    updated_board.append(row_cards)
+                    # 更新牌桌
+                    updated_board = []
+                    for row in self.game_room.game_state.board_rows:
+                        row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
+                        updated_board.append(row_cards)
+                    
+                    # 廣播遊戲結果 - 包含玩家索引、卡牌值等信息
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'round_completed',
+                            'results': results,
+                            'board': updated_board
+                        }
+                    )
                 
-                # 廣播遊戲結果 - 包含玩家索引、卡牌值等信息
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'round_completed',
-                        'results': results,
-                        'board': updated_board
-                    }
-                )
-
+                # 檢查出牌玩家手牌是否已用完 (手牌數為0)
+                player_index = await self.get_player_index()
+                if player_index is not None and player_index < len(self.game_room.game_state.player_hands):
+                    if len(self.game_room.game_state.player_hands[player_index]) == 0:
+                        print(f"玩家 {self.user.username} (ID: {self.user.id}) 手牌已用完，重新發牌...")
+                        
+                        # 獲取玩家數量
+                        player_count = self.game_room.get_player_count()
+                        
+                        # 重新初始化遊戲狀態（重置牌桌和手牌，但保留玩家分數）
+                        self.game_room.game_state = None  # 先清空現有遊戲狀態
+                        self.game_room.initialize_game_state(player_count)  # 重新創建遊戲狀態
+                        
+                        # 更新牌桌
+                        new_board = []
+                        for row in self.game_room.game_state.board_rows:
+                            row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
+                            new_board.append(row_cards)
+                        
+                        # 通知所有玩家遊戲已重置
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'game_restarted',
+                                'message': '遊戲已重新發牌，玩家分數保持不變',
+                                'board': new_board
+                            }
+                        )
+    
     async def card_played(self, event):
         # 如果自己是發送者，不發送此消息
         if event.get('sender_id') == self.user.id:
@@ -800,7 +889,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         """更新玩家分數，扣除收集到的牛頭數"""
         from .models import Player
         from django.contrib.auth.models import User
-        
+        print("get_and_update_player_score", player_id, bull_heads_to_deduct)
         try:
             # 獲取玩家資料
             player = Player.objects.get(user_id=player_id, game__room__name=self.room_name, game__active=True)
@@ -823,9 +912,25 @@ class GameConsumer(AsyncWebsocketConsumer):
             return None
 
     async def update_player_score(self, event):
-        """處理玩家分數更新消息"""
+        """處理玩家分數更新的消息"""
         await self.send(text_data=json.dumps({
-            'type': 'update_score',
+            'type': 'update_player_score',
             'username': event['username'],
             'score': event['score']
+        }))
+    
+    async def game_restarted(self, event):
+        """處理遊戲重新發牌的消息"""
+        await self.send(text_data=json.dumps({
+            'type': 'game_restarted',
+            'message': event['message'],
+            'board': event['board']
+        }))
+        # 重置已處理玩家記錄
+        self.processed_players = set()
+        
+        # 在重新發牌時，也要向玩家發送請求手牌的提示
+        await self.send(text_data=json.dumps({
+            'type': 'request_new_cards',
+            'message': '請點擊取得新手牌'
         }))

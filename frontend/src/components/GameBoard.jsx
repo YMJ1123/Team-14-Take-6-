@@ -33,6 +33,8 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [choosingRows, setChoosingRows] = useState([]);
   // 新增：等待選擇的玩家名
   const [waitingPlayer, setWaitingPlayer] = useState(null);
+  const [gameRound, setGameRound] = useState(1); // 追蹤遊戲輪次
+  const [showRestartMessage, setShowRestartMessage] = useState(false); // 顯示重新開始的訊息
   
   // 生成完整牌組 - 固定順序的牌組，所有玩家都用這個順序
   const generateDeck = () => {
@@ -318,6 +320,44 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         console.log("牌桌更新完成，翻牌區已清空");
       }
       
+      // 處理遊戲重新發牌的消息
+      if (data.type === "game_restarted") {
+        console.log("遊戲重新發牌:", data);
+        
+        // 顯示遊戲重新發牌的消息
+        setShowRestartMessage(true);
+        
+        // 更新遊戲輪次
+        setGameRound(prevRound => prevRound + 1);
+        
+        // 更新牌桌
+        if (data.board) {
+          setBoard(data.board);
+        }
+        
+        // 清空同時出牌區域和手牌
+        setFlippedCards([]);
+        setIsFlipping(false);
+        setPlayedCard(null);
+        setHand([]);
+        
+        console.log("遊戲重置完成，請求新手牌");
+      }
+      
+      // 處理請求新手牌的消息
+      if (data.type === "request_new_cards") {
+        console.log("請求新手牌:", data);
+        
+        // 請求新手牌
+        // if (socket && playerId !== null) {
+        const playerIndex = findMyPlayerIndex();
+        socket.send(JSON.stringify({
+          type: "request_cards_again",
+          player_index: playerIndex
+        }));
+        // }
+      }
+      
       // 更新玩家資訊和玩家ID
       if (data.type === "room_info" && data.players) {
         setPlayers(data.players); // 儲存完整的玩家列表
@@ -384,6 +424,17 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       socket.removeEventListener("message", handleMessage);
     };
   }, [socket, isGameStarted, playerId, players]);
+
+  // 自動消失重新開始訊息
+  useEffect(() => {
+    if (showRestartMessage) {
+      const timer = setTimeout(() => {
+        setShowRestartMessage(false);
+      }, 5000); // 5秒後自動隱藏
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showRestartMessage]);
 
   // 修改 createEmptyCardSlots 函數以顯示牛頭數
   const createEmptyCardSlots = (rowIndex) => {

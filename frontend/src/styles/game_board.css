@@ -318,3 +318,23 @@
   font-weight: bold;
   color: #f39c12;
 }
+
+@keyframes slide-down {
+  from {
+    top: -100px;
+    opacity: 0;
+  }
+  to {
+    top: 20px;
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
