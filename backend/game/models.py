@@ -21,7 +21,7 @@ class GameSession(models.Model):
 class Player(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     game = models.ForeignKey(GameSession, on_delete=models.CASCADE)
-    score = models.IntegerField(default=0)
+    score = models.IntegerField(default=66)
     is_ready = models.BooleanField(default=False)
     joined_at = models.DateTimeField(auto_now_add=True)
     

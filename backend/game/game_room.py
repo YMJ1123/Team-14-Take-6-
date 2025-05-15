@@ -14,6 +14,11 @@ class GameRoom:
         self.played_cards = {}  # 記錄已出牌的玩家和對應的卡牌索引
         self.round_results = []  # 儲存本輪出牌的結果
         self.player_indices = OrderedDict()  # 記錄玩家ID到索引的映射
+        # 新增：記錄需要選擇列的玩家和他們的狀態
+        self.pending_choices = {}  # 格式: {player_id: {'card_idx': card_idx, 'player_index': player_index, 'card_value': card_value}}
+        # 新增：記錄當前處理到哪一張牌
+        self.processing_index = 0
+        self.cards_to_process = []
     
     def initialize_game_state(self, player_count):
         """初始化房間的遊戲狀態（確保只初始化一次）"""
@@ -79,13 +84,17 @@ class GameRoom:
         """獲取當前房間的玩家數量"""
         return len(self.connected_players)
     
-    def record_played_card(self, player_id, card_idx, card_value):
+    def get_player_name(self, player_id):
+        return self.played_cards[player_id]['player_name']
+    
+    def record_played_card(self, player_id, card_idx, card_value, player_name):
         """記錄玩家出的牌，同時記錄卡牌索引和值"""
         self.played_cards[player_id] = {
             'value': card_value,
-            'idx': card_idx
+            'idx': card_idx,
+            'player_name': player_name
         }
-        print(f"玩家 {player_id} 在房間 {self.name} 中出了數字 {card_value}，索引 {card_idx}")
+        print(f"玩家 {player_id}也就是{player_name}在房間 {self.name} 中出了數字 {card_value}，索引 {card_idx}")
         return self.are_all_players_played()
     
     def are_all_players_played(self):
@@ -105,9 +114,11 @@ class GameRoom:
         if not self.are_all_players_played():
             return None
             
-        results = []
+        # 清空上一輪的結果
+        self.round_results = []
+        
         # 收集所有玩家的出牌信息，包括卡牌值
-        cards_to_process = []
+        self.cards_to_process = []
         print("self.played_cards: ", self.played_cards)
         
         for player_id, card_info in self.played_cards.items():
@@ -118,40 +129,150 @@ class GameRoom:
                 print(f"警告: 無法找到玩家 {player_id} 的索引")
                 continue
             
-            cards_to_process.append({
+            self.cards_to_process.append({
                 'player_id': player_id,
                 'player_index': player_index,
                 'card_value': card_info['value'],
-                'card_idx': card_info['idx']
+                'card_idx': card_info['idx'],
+                'player_name': card_info['player_name']
             })
         
         # 按照卡牌值從小到大排序
-        cards_to_process.sort(key=lambda card: card['card_value'])
-        print(f"按卡牌值排序後的出牌順序: {[card['card_value'] for card in cards_to_process]}")
+        self.cards_to_process.sort(key=lambda card: card['card_value'])
+        print(f"按卡牌值排序後的出牌順序: {[card['card_value'] for card in self.cards_to_process]}")
         
-        # 按照排序後的順序處理出牌
-        for card_info in cards_to_process:
-            player_id = card_info['player_id']
-            player_index = card_info['player_index']
-            card_value = card_info['card_value']
-            card_idx = card_info['card_idx']
-            
-            # 調用遊戲邏輯處理出牌，使用玩家索引而不是絕對ID
-            result = self.game_state.play_card(player_index, card_idx)
-            print(f"玩家 {player_id} (索引 {player_index}) 出牌 {card_value} (索引 {card_idx}) 結果: {result}")
-            
-            results.append({
-                'player_id': player_id,
-                'player_index': player_index,
-                'card_value': card_value,
+        # 重置處理索引
+        self.processing_index = 0
+        
+        # 使用新方法處理卡牌
+        return self.process_next_card()
+    
+    def process_next_card(self):
+        """處理下一張卡牌，如果有玩家需要選擇列，則返回特殊結果"""
+        results = []
+        
+        # 如果已經處理完所有卡牌，返回結果
+        if self.processing_index >= len(self.cards_to_process):
+            # 清空已出牌記錄（準備下一輪）
+            self.played_cards = {}
+            self.processing_index = 0
+            self.cards_to_process = []
+            return self.round_results
+        
+        # 獲取當前要處理的卡牌
+        card_info = self.cards_to_process[self.processing_index]
+        player_id = card_info['player_id']
+        player_index = card_info['player_index']
+        card_value = card_info['card_value']
+        card_idx = card_info['card_idx']
+        player_name = card_info['player_name']
+        
+        # 如果這個玩家正在等待選擇，跳過
+        if player_id in self.pending_choices:
+            # 增加索引
+            self.processing_index += 1
+            # 處理下一張卡牌
+            return self.process_next_card()
+        
+        # 調用遊戲邏輯處理出牌，使用玩家索引而不是絕對ID
+        result = self.game_state.play_card(player_index, card_idx)
+        print(f"玩家 {player_id}({player_name}) (索引 {player_index}) 出牌 {card_value} (索引 {card_idx}) 結果: {result}")
+        
+        # 如果需要選擇列
+        if result and result.get('action') == 'choose_row':
+            # 保存需要選擇的玩家狀態
+            self.pending_choices[player_id] = {
                 'card_idx': card_idx,
-                'result': result
-            })
+                'player_index': player_index,
+                'card_value': card_value
+            }
             
-        # 儲存結果並清空已出牌記錄（準備下一輪）
-        self.round_results = results
-        self.played_cards = {}
+            # 計算每行的牛頭數
+            row_bull_heads = []
+            for row in self.game_state.board_rows:
+                if row:  # 確保行不為空
+                    bull_heads = sum(card.bull_heads for card in row)
+                    row_bull_heads.append(bull_heads)
+                else:
+                    row_bull_heads.append(0)
+                
+            # 返回需要選擇列的特殊結果
+            return {
+                'type': 'choose_row_needed',
+                'player_id': player_id,
+                'player_name': player_name,
+                'row_bull_heads': row_bull_heads
+            }
+        
+        # 正常處理出牌結果
+        result_item = {
+            'player_id': player_id,
+            'player_index': player_index,
+            'card_value': card_value,
+            'card_idx': card_idx,
+            'player_name': player_name,
+            'result': result
+        }
+        
+        # 添加到結果列表
+        self.round_results.append(result_item)
+        results.append(result_item)
+        
+        # 增加索引
+        self.processing_index += 1
+        
+        # 處理下一張卡牌
+        next_results = self.process_next_card()
+        
+        # 如果有特殊結果，直接返回
+        if next_results and isinstance(next_results, dict) and next_results.get('type') == 'choose_row_needed':
+            return next_results
+        
+        # 否則合併結果
+        if next_results and isinstance(next_results, list):
+            results.extend(next_results)
+        
         return results
+    
+    def handle_choose_row(self, player_id, row_idx):
+        """處理玩家選擇的列"""
+        if player_id not in self.pending_choices:
+            print(f"錯誤：玩家 {player_id} 沒有待處理的選擇")
+            return None
+        
+        choice_info = self.pending_choices[player_id]
+        player_index = choice_info['player_index']
+        card_idx = choice_info['card_idx']
+        
+        # 從游戲邏輯獲取結果
+        result = self.game_state.resume_from_choose_row(player_index, card_idx, row_idx)
+        
+        # 從待處理列表中移除
+        del self.pending_choices[player_id]
+        
+        # 添加到結果列表
+        result_item = {
+            'player_id': player_id,
+            'player_index': player_index,
+            'card_value': choice_info['card_value'],
+            'card_idx': card_idx,
+            'result': result
+        }
+        
+        self.round_results.append(result_item)
+        
+        # 增加處理索引，準備處理下一張卡牌
+        self.processing_index += 1
+        
+        # 繼續處理下一張卡牌
+        next_results = self.process_next_card()
+        
+        # 檢查結果是否需要另一個玩家選擇行
+        if next_results and isinstance(next_results, dict) and next_results.get('type') == 'choose_row_needed':
+            return next_results
+        
+        # 否則返回所有結果
+        return next_results
     
     @staticmethod
     def get_room(room_name):

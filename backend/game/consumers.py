@@ -13,6 +13,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f'game_{self.room_name}'
         self.user = self.scope["user"]
+        # 創建一個集合來存儲已經處理過分數扣除的玩家ID
+        self.processed_players = set()
         
         await self.accept()
         
@@ -184,6 +186,38 @@ class GameConsumer(AsyncWebsocketConsumer):
                     }))
                     return
 
+            if message_type == 'request_cards_again':
+                # 獲取該玩家的手牌（從共享的 GameState 中獲取）
+                print("request_cards_again")
+                game_state = self.game_room.game_state
+                print("game_state: ", game_state)
+                print("people: ",len(game_state.player_hands))
+                player_id = self.user.id
+                player_id_room = self.game_room.get_player_index(player_id)
+                print("player_id: ", player_id)
+                print("player_id_room: ", player_id_room)
+                if player_id_room < len(game_state.player_hands):
+                    hand = game_state.player_hands[player_id_room]
+                    print("hand: ", hand)
+                    # 轉換成可序列化的格式
+                    hand_data = [{'value': card.value, 'bull_heads': card.bull_heads} for card in hand]
+                    
+                    # 直接向請求的玩家發送手牌
+                    await self.send(text_data=json.dumps({
+                        'type': 'cards_assigned',
+                        'cards': hand_data
+                    }))
+                    
+                    # 記錄發牌日誌
+                    print(f"已向玩家 {username} 亦是 {player_id}(房間編號 {player_id_room}) 發送手牌: {[card['value'] for card in hand_data]}")
+                    return
+                else:
+                    await self.send(text_data=json.dumps({
+                        'type': 'error',
+                        'message': '無法找到您的手牌'
+                    }))
+                    return
+
             if message_type == 'start_game':
                 # 廣播遊戲開始消息給所有玩家
                 await self.channel_layer.group_send(
@@ -237,7 +271,118 @@ class GameConsumer(AsyncWebsocketConsumer):
                 card_value = data.get('value', 0)
                 bull_heads = data.get('bull_heads', 0)
                 player_name = data.get('player_name', username)
-                await self.handle_play_card(card_idx, card_value, player_name)
+                await self.handle_play_card(card_idx, card_value, bull_heads, player_name)
+            
+            # 處理玩家選擇列的消息
+            elif message_type == 'choose_row_response':
+                row_index = data.get('row_index')
+                player_id = self.user.id  # 使用當前用戶ID
+                
+                # 調用 GameRoom 的 handle_choose_row 方法處理選擇
+                results = self.game_room.handle_choose_row(player_id, row_index)
+                
+                # 檢查是否有更多玩家需要選擇行
+                if results and isinstance(results, dict) and results.get('type') == 'choose_row_needed':
+                    player_id = results.get('player_id')
+                    player_name = results.get('player_name')
+                    row_bull_heads = results.get('row_bull_heads')
+                    
+                    # 向需要選擇的玩家發送選擇列的消息
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'choose_row',
+                            'sender_id': player_id,
+                            'player_name': player_name,
+                            'row_bull_heads': row_bull_heads
+                        }
+                    )
+                    
+                    # 向其他玩家廣播等待消息
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'wait_choose_card',
+                            'player_id': player_id,
+                            'player_name': player_name
+                        }
+                    )
+                    return
+                
+                # 所有選擇都已完成，廣播最終結果
+                if results:
+                    # 清空已處理玩家記錄（新回合重新開始）
+                    self.processed_players = set()
+                    # 檢查結果是否包含需要扣分的情況（收集牛頭）
+                    for result_item in results:
+                        if isinstance(result_item, dict) and result_item.get('result') and result_item['result'].get('action') == 'collect':
+                            # 獲取要扣除的牛頭數
+                            bull_heads = result_item['result'].get('bull_heads', 0)
+                            player_id = result_item['player_id']
+                            
+                            # 確保每個玩家只處理一次
+                            if bull_heads > 0 and player_id not in self.processed_players:
+                                # 記錄已處理的玩家
+                                self.processed_players.add(player_id)
+                                
+                                # 更新玩家分數
+                                updated_player = await self.update_player_score_and_check_game_over(player_id, bull_heads)
+                                
+                                if updated_player:
+                                    # 廣播分數更新
+                                    await self.channel_layer.group_send(
+                                        self.room_group_name,
+                                        {
+                                            'type': 'update_player_score',
+                                            'username': updated_player['username'],
+                                            'score': updated_player['score']
+                                        }
+                                    )
+                
+                    # 更新牌桌
+                    updated_board = []
+                    for row in self.game_room.game_state.board_rows:
+                        row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
+                        updated_board.append(row_cards)
+                    
+                    # 廣播遊戲結果 - 包含玩家索引、卡牌值等信息
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'round_completed',
+                            'results': results,
+                            'board': updated_board
+                        }
+                    )
+                    
+                    # 檢查出牌玩家手牌是否已用完 (手牌數為0)
+                    player_index = await self.get_player_index()
+                    if player_index is not None and player_index < len(self.game_room.game_state.player_hands):
+                        if len(self.game_room.game_state.player_hands[player_index]) == 0:
+                            print(f"玩家 {self.user.username} (ID: {self.user.id}) 手牌已用完，重新發牌...")
+                            
+                            # 獲取玩家數量
+                            player_count = self.game_room.get_player_count()
+                            
+                            # 重新初始化遊戲狀態（重置牌桌和手牌，但保留玩家分數）
+                            self.game_room.game_state = None  # 先清空現有遊戲狀態
+                            self.game_room.initialize_game_state(player_count)  # 重新創建遊戲狀態
+                            
+                            # 更新牌桌
+                            new_board = []
+                            for row in self.game_room.game_state.board_rows:
+                                row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
+                                new_board.append(row_cards)
+                            
+                            # 通知所有玩家遊戲已重置
+                            await self.channel_layer.group_send(
+                                self.room_group_name,
+                                {
+                                    'type': 'game_restarted',
+                                    'message': '遊戲已重新發牌，玩家分數保持不變',
+                                    'board': new_board
+                                }
+                            )
             
             elif message_type == 'chat_message':
                 message = data.get('message')
@@ -335,7 +480,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'board': event['board']
         }))
     
-    async def handle_play_card(self, card_idx, card_value, player_name):
+    async def handle_play_card(self, card_idx, card_value, bull_heads, player_name):
         # 檢查遊戲是否已經開始
         if not self.game_room.has_game_state():
             await self.send(text_data=json.dumps({
@@ -344,34 +489,100 @@ class GameConsumer(AsyncWebsocketConsumer):
             }))
             return
         
-        # 獲取玩家在遊戲中的索引
-        player_idx = await self.get_player_index()
+        # 記錄玩家出牌 (使用self.user.id作為玩家ID)
+        all_played = self.game_room.record_played_card(self.user.id, card_idx, card_value, player_name)
         
-        try:
-            # 記錄玩家出牌 - 使用玩家的資料庫 ID、卡牌索引和卡牌值
-            all_played = self.game_room.record_played_card(self.user.id, card_idx, card_value)
+        # 通知其他玩家有人出牌(不顯示是哪張牌)
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'card_played',
+                'sender_id': self.user.id,
+                'player_name': player_name,
+                'player_username': self.user.username,
+                'card_value': card_value, 
+                'bull_heads': bull_heads, 
+                'player_idx': await self.get_player_index()
+            }
+        )
+        
+        # 如果所有玩家都已出牌，進行遊戲邏輯處理
+        if all_played:
+            print("所有玩家都已出牌，處理遊戲邏輯")
+            # 處理所有已出牌，這裡會使用玩家索引而不是絕對ID，並按照卡牌值排序
+            results = self.game_room.process_played_cards()
             
-            # 向所有玩家(包括自己)廣播出牌訊息
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'card_played',
-                    'player_username': self.user.username,
-                    'player_name': player_name,
-                    'card_idx': card_idx,
-                    'card_value': card_value,
-                    'sender_id': self.user.id,  # 標記發送者ID用於排除
-                    'player_idx': player_idx
-                }
-            )
-            
-            # 如果所有玩家都已出牌，進行遊戲邏輯處理
-            if all_played:
-                print("所有玩家都已出牌，處理遊戲邏輯")
-                # 處理所有已出牌，這裡會使用玩家索引而不是絕對ID，並按照卡牌值排序
-                results = self.game_room.process_played_cards()
+            # 檢查是否有玩家需要選擇列
+            if isinstance(results, dict) and results.get('type') == 'choose_row_needed':
+                player_id = results.get('player_id')
+                player_name = results.get('player_name')
+                row_bull_heads = results.get('row_bull_heads', [])
                 
-                if results:
+                if not player_name and player_id:
+                    # 嘗試從玩家 ID 查找用戶名
+                    for player in await self.get_room_players():
+                        if str(player['id']) == str(player_id):
+                            player_name = player['username']
+                            break
+                    if not player_name:
+                        player_name = "未知玩家"
+                
+                print(f"玩家 {player_id}({player_name}) 需要選擇一列，牛頭數: {row_bull_heads}")
+                
+                # 向需要選擇的玩家發送選擇列的消息
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'choose_row',
+                        'sender_id': player_id,
+                        'player_name': player_name,
+                        'row_bull_heads': row_bull_heads
+                    }
+                )
+                
+                # 向其他玩家廣播等待消息
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'wait_choose_card',
+                        'player_id': player_id,
+                        'player_name': player_name
+                    }
+                )
+                
+                return
+            
+            # 正常流程：更新牌桌
+            if results:
+                # 清空已處理玩家記錄（新回合重新開始）
+                self.processed_players = set()
+                
+                # 檢查結果是否包含需要扣分的情況（收集牛頭）
+                for result_item in results:
+                    if isinstance(result_item, dict) and result_item.get('result') and result_item['result'].get('action') == 'collect':
+                        # 獲取要扣除的牛頭數
+                        bull_heads = result_item['result'].get('bull_heads', 0)
+                        player_id = result_item['player_id']
+                        
+                        # 確保每個玩家只處理一次
+                        if bull_heads > 0 and player_id not in self.processed_players:
+                            # 記錄已處理的玩家
+                            self.processed_players.add(player_id)
+                            
+                            # 更新玩家分數
+                            updated_player = await self.update_player_score_and_check_game_over(player_id, bull_heads)
+                            
+                            if updated_player:
+                                # 廣播分數更新
+                                await self.channel_layer.group_send(
+                                    self.room_group_name,
+                                    {
+                                        'type': 'update_player_score',
+                                        'username': updated_player['username'],
+                                        'score': updated_player['score']
+                                    }
+                                )
+                
                     # 更新牌桌
                     updated_board = []
                     for row in self.game_room.game_state.board_rows:
@@ -387,14 +598,35 @@ class GameConsumer(AsyncWebsocketConsumer):
                             'board': updated_board
                         }
                     )
-                else:
-                    print("處理出牌結果為空")
-            
-        except Exception as e:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': f'出牌錯誤: {str(e)}'
-            }))
+                
+                # 檢查出牌玩家手牌是否已用完 (手牌數為0)
+                player_index = await self.get_player_index()
+                if player_index is not None and player_index < len(self.game_room.game_state.player_hands):
+                    if len(self.game_room.game_state.player_hands[player_index]) == 0:
+                        print(f"玩家 {self.user.username} (ID: {self.user.id}) 手牌已用完，重新發牌...")
+                        
+                        # 獲取玩家數量
+                        player_count = self.game_room.get_player_count()
+                        
+                        # 重新初始化遊戲狀態（重置牌桌和手牌，但保留玩家分數）
+                        self.game_room.game_state = None  # 先清空現有遊戲狀態
+                        self.game_room.initialize_game_state(player_count)  # 重新創建遊戲狀態
+                        
+                        # 更新牌桌
+                        new_board = []
+                        for row in self.game_room.game_state.board_rows:
+                            row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
+                            new_board.append(row_cards)
+                        
+                        # 通知所有玩家遊戲已重置
+                        await self.channel_layer.group_send(
+                            self.room_group_name,
+                            {
+                                'type': 'game_restarted',
+                                'message': '遊戲已重新發牌，玩家分數保持不變',
+                                'board': new_board
+                            }
+                        )
     
     async def card_played(self, event):
         # 如果自己是發送者，不發送此消息
@@ -423,10 +655,30 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     async def round_completed(self, event):
         """處理一輪出牌結束後的結果廣播"""
+        # 不需要在這裡再次處理分數更新，因為已經在 handle_play_card 和 choose_row_response 中處理過了
         await self.send(text_data=json.dumps({
             'type': 'round_completed',
             'results': event['results'],
             'board': event['board']
+        }))
+    
+    async def choose_row(self, event):
+        # 如果自己是發送者，才要通知前端顯示
+        if event.get('sender_id') == self.user.id:
+            message = {
+                'type': 'i_choose_row',
+                'player_username': self.user.username,
+                'bull_heads': event.get('row_bull_heads'),  
+                'player_id': event.get('sender_id'),  # 添加發送者ID作為玩家ID
+            }
+            await self.send(text_data=json.dumps(message))
+            return
+        
+        # 如果是其他人，只要顯示一行字，代表用戶正在選擇牌
+        await self.send(text_data=json.dumps({
+            'type': 'wait_choose_card',
+            'player_id': event.get('sender_id'),
+            'player_name': event.get('player_name')
         }))
     
     async def room_info(self, event):
@@ -622,3 +874,136 @@ class GameConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             print(f"創建訪客用戶時出錯: {str(e)}")
             return None
+
+    async def wait_choose_card(self, event):
+        """通知其他玩家等待某個玩家選擇列"""
+        # 如果自己是需要選擇的玩家，不發送等待消息
+        if event.get('player_id') == self.user.id:
+            return
+            
+        await self.send(text_data=json.dumps({
+            'type': 'wait_choose_card',
+            'player_id': event.get('player_id'),
+            'player_name': event.get('player_name')
+        }))
+
+    @database_sync_to_async
+    def get_and_update_player_score(self, player_id, bull_heads_to_deduct):
+        """更新玩家分數，扣除收集到的牛頭數"""
+        from .models import Player
+        from django.contrib.auth.models import User
+        print("get_and_update_player_score", player_id, bull_heads_to_deduct)
+        try:
+            # 獲取玩家資料
+            player = Player.objects.get(user_id=player_id, game__room__name=self.room_name, game__active=True)
+            
+            # 更新分數（扣除收集到的牛頭數）
+            player.score -= bull_heads_to_deduct
+            player.save()
+            
+            print(f"已更新玩家 {player.user.username} (ID: {player_id}) 的分數：扣除 {bull_heads_to_deduct} 牛頭，目前分數為 {player.score}")
+            
+            # 返回玩家資料，包括是否需要觸發遊戲結束
+            return {
+                'username': player.user.username,
+                'score': player.score,
+                'game_over': player.score <= 0,
+                'player': player
+            }
+        except Player.DoesNotExist:
+            print(f"找不到玩家 ID {player_id} 的資料")
+            return None
+        except Exception as e:
+            print(f"更新玩家分數時出錯: {str(e)}")
+            return None
+
+    async def update_player_score_and_check_game_over(self, player_id, bull_heads_to_deduct):
+        """更新玩家分數並檢查是否需要結束遊戲"""
+        # 調用資料庫同步方法更新分數
+        result = await self.get_and_update_player_score(player_id, bull_heads_to_deduct)
+        
+        if not result:
+            return None
+            
+        # 檢查是否需要結束遊戲
+        if result.get('game_over', False):
+            player = result.get('player')
+            print(f"玩家 {result['username']} (ID: {player_id}) 分數歸零或負數，觸發遊戲結束")
+            await self.handle_game_over(player)
+        
+        # 返回不包含內部資料的結果
+        return {
+            'username': result['username'],
+            'score': result['score']
+        }
+
+    async def handle_game_over(self, player):
+        """處理遊戲結束的邏輯"""
+        try:
+            # 獲取所有玩家的當前分數
+            all_players = await self.get_room_players()
+            
+            # 將觸發結束的玩家標記為失敗者
+            loser = {
+                'id': player.user.id,
+                'username': player.user.username,
+                'score': player.score
+            }
+            
+            # 獲取分數最高的玩家作為勝利者
+            winners = sorted(all_players, key=lambda p: p['score'], reverse=True)
+            
+            # 準備遊戲結束數據
+            game_over_data = {
+                'losers': [loser],  # 只包含觸發遊戲結束的玩家
+                'winners': winners[:1],  # 只取分數最高的玩家
+                'all_players': sorted(all_players, key=lambda p: p['score'], reverse=True)  # 所有玩家按分數排序
+            }
+            
+            # 通知所有玩家遊戲結束
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'game_over',
+                    'message': f'遊戲結束！玩家 {player.user.username} 分數歸零',
+                    'data': game_over_data
+                }
+            )
+            
+            # 清理遊戲狀態
+            self.game_room.game_state = None
+        except Exception as e:
+            print(f"處理遊戲結束時出錯: {str(e)}")
+            return None
+
+    async def game_over(self, event):
+        """處理遊戲結束事件"""
+        await self.send(text_data=json.dumps({
+            'type': 'game_over',
+            'message': event['message'],
+            'data': event['data']
+        }))
+
+    async def update_player_score(self, event):
+        """處理玩家分數更新的消息"""
+        await self.send(text_data=json.dumps({
+            'type': 'update_player_score',
+            'username': event['username'],
+            'score': event['score']
+        }))
+    
+    async def game_restarted(self, event):
+        """處理遊戲重新發牌的消息"""
+        await self.send(text_data=json.dumps({
+            'type': 'game_restarted',
+            'message': event['message'],
+            'board': event['board']
+        }))
+        # 重置已處理玩家記錄
+        self.processed_players = set()
+        
+        # 在重新發牌時，也要向玩家發送請求手牌的提示
+        await self.send(text_data=json.dumps({
+            'type': 'request_new_cards',
+            'message': '請點擊取得新手牌'
+        }))

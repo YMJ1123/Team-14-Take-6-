@@ -243,3 +243,240 @@
 .start-game-btn:hover {
   background-color: #2980b9;
 }
+
+/* 牛頭計數樣式 */
+.row-bull-heads-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: 15px;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.row-bull-heads {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.bull-icon {
+  width: 30px;
+  height: 30px;
+  margin-right: 5px;
+}
+
+.bull-count {
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+.choose-row-btn {
+  padding: 8px 15px;
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.choose-row-btn:hover {
+  background-color: #c0392b;
+}
+
+/* 等待覆蓋層樣式 */
+.flip-area-content {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 15px;
+}
+
+.waiting-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.waiting-player {
+  font-weight: bold;
+  color: #f39c12;
+}
+
+@keyframes slide-down {
+  from {
+    top: -100px;
+    opacity: 0;
+  }
+  to {
+    top: 20px;
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Game Over Overlay & Modal */
+.game-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.game-over-modal {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  padding: 30px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.game-over-modal h2 {
+  font-size: 32px;
+  margin-bottom: 10px;
+  color: #e74c3c;
+}
+
+.game-over-modal p {
+  font-size: 18px;
+  margin-bottom: 25px;
+  color: #555;
+}
+
+.winner-section, .loser-section {
+  margin-bottom: 25px;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.winner-section {
+  background-color: rgba(46, 204, 113, 0.2);
+  border: 2px solid #2ecc71;
+}
+
+.loser-section {
+  background-color: rgba(231, 76, 60, 0.2);
+  border: 2px solid #e74c3c;
+}
+
+.winner-section h3, .loser-section h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.winner-info, .loser-info {
+  font-size: 22px;
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 15px;
+}
+
+.all-players-ranking {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 25px;
+}
+
+.all-players-ranking h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.player-rank {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 15px;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.rank-number {
+  font-weight: bold;
+  min-width: 40px;
+  text-align: center;
+}
+
+.back-to-lobby-btn {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 12px 25px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.back-to-lobby-btn:hover {
+  background-color: #2980b9;
+}
+
+.player-score {
+  font-weight: bold;
+}
+
+.negative-score {
+  color: #e74c3c;
+  font-weight: bold;
+}
+
+.eliminated-player {
+  background-color: rgba(231, 76, 60, 0.1);
+  border-left: 4px solid #e74c3c;
+}
+
+.current-player {
+  background-color: rgba(52, 152, 219, 0.1);
+  border-left: 4px solid #3498db;
+}
+
+.self-indicator {
+  font-size: 0.8em;
+  color: #3498db;
+  margin-left: 8px;
+  font-style: italic;
+}
