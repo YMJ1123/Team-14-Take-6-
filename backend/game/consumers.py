@@ -192,9 +192,12 @@ class GameConsumer(AsyncWebsocketConsumer):
                 game_state = self.game_room.game_state
                 print("game_state: ", game_state)
                 print("people: ",len(game_state.player_hands))
-                player_idx = data.get('player_index', -1)
-                if player_idx < len(game_state.player_hands):
-                    hand = game_state.player_hands[player_idx]
+                player_id = self.user.id
+                player_id_room = self.game_room.get_player_index(player_id)
+                print("player_id: ", player_id)
+                print("player_id_room: ", player_id_room)
+                if player_id_room < len(game_state.player_hands):
+                    hand = game_state.player_hands[player_id_room]
                     print("hand: ", hand)
                     # 轉換成可序列化的格式
                     hand_data = [{'value': card.value, 'bull_heads': card.bull_heads} for card in hand]
@@ -206,7 +209,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                     }))
                     
                     # 記錄發牌日誌
-                    print(f"已向玩家 {username} (索引 {player_idx}) 發送手牌: {[card['value'] for card in hand_data]}")
+                    print(f"已向玩家 {username} 亦是 {player_id}(房間編號 {player_id_room}) 發送手牌: {[card['value'] for card in hand_data]}")
                     return
                 else:
                     await self.send(text_data=json.dumps({
@@ -323,7 +326,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                                 self.processed_players.add(player_id)
                                 
                                 # 更新玩家分數
-                                updated_player = await self.get_and_update_player_score(player_id, bull_heads)
+                                updated_player = await self.update_player_score_and_check_game_over(player_id, bull_heads)
                                 
                                 if updated_player:
                                     # 廣播分數更新
@@ -567,7 +570,7 @@ class GameConsumer(AsyncWebsocketConsumer):
                             self.processed_players.add(player_id)
                             
                             # 更新玩家分數
-                            updated_player = await self.get_and_update_player_score(player_id, bull_heads)
+                            updated_player = await self.update_player_score_and_check_game_over(player_id, bull_heads)
                             
                             if updated_player:
                                 # 廣播分數更新
@@ -900,9 +903,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             
             print(f"已更新玩家 {player.user.username} (ID: {player_id}) 的分數：扣除 {bull_heads_to_deduct} 牛頭，目前分數為 {player.score}")
             
+            # 返回玩家資料，包括是否需要觸發遊戲結束
             return {
                 'username': player.user.username,
-                'score': player.score
+                'score': player.score,
+                'game_over': player.score <= 0,
+                'player': player
             }
         except Player.DoesNotExist:
             print(f"找不到玩家 ID {player_id} 的資料")
@@ -910,6 +916,73 @@ class GameConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             print(f"更新玩家分數時出錯: {str(e)}")
             return None
+
+    async def update_player_score_and_check_game_over(self, player_id, bull_heads_to_deduct):
+        """更新玩家分數並檢查是否需要結束遊戲"""
+        # 調用資料庫同步方法更新分數
+        result = await self.get_and_update_player_score(player_id, bull_heads_to_deduct)
+        
+        if not result:
+            return None
+            
+        # 檢查是否需要結束遊戲
+        if result.get('game_over', False):
+            player = result.get('player')
+            print(f"玩家 {result['username']} (ID: {player_id}) 分數歸零或負數，觸發遊戲結束")
+            await self.handle_game_over(player)
+        
+        # 返回不包含內部資料的結果
+        return {
+            'username': result['username'],
+            'score': result['score']
+        }
+
+    async def handle_game_over(self, player):
+        """處理遊戲結束的邏輯"""
+        try:
+            # 獲取所有玩家的當前分數
+            all_players = await self.get_room_players()
+            
+            # 將觸發結束的玩家標記為失敗者
+            loser = {
+                'id': player.user.id,
+                'username': player.user.username,
+                'score': player.score
+            }
+            
+            # 獲取分數最高的玩家作為勝利者
+            winners = sorted(all_players, key=lambda p: p['score'], reverse=True)
+            
+            # 準備遊戲結束數據
+            game_over_data = {
+                'losers': [loser],  # 只包含觸發遊戲結束的玩家
+                'winners': winners[:1],  # 只取分數最高的玩家
+                'all_players': sorted(all_players, key=lambda p: p['score'], reverse=True)  # 所有玩家按分數排序
+            }
+            
+            # 通知所有玩家遊戲結束
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'game_over',
+                    'message': f'遊戲結束！玩家 {player.user.username} 分數歸零',
+                    'data': game_over_data
+                }
+            )
+            
+            # 清理遊戲狀態
+            self.game_room.game_state = None
+        except Exception as e:
+            print(f"處理遊戲結束時出錯: {str(e)}")
+            return None
+
+    async def game_over(self, event):
+        """處理遊戲結束事件"""
+        await self.send(text_data=json.dumps({
+            'type': 'game_over',
+            'message': event['message'],
+            'data': event['data']
+        }))
 
     async def update_player_score(self, event):
         """處理玩家分數更新的消息"""

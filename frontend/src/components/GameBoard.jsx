@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from "./Card";
 import "../styles/game_board.css";
 
 const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
+  const navigate = useNavigate();
   const [board, setBoard] = useState([[], [], [], []]);
   const [flippedCards, setFlippedCards] = useState([]);
   const [isFlipping, setIsFlipping] = useState(false);
@@ -35,6 +37,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [waitingPlayer, setWaitingPlayer] = useState(null);
   const [gameRound, setGameRound] = useState(1); // 追蹤遊戲輪次
   const [showRestartMessage, setShowRestartMessage] = useState(false); // 顯示重新開始的訊息
+  // 遊戲是否結束
+  const [isGameOver, setIsGameOver] = useState(false);
+  // 遊戲結束數據
+  const [gameOverData, setGameOverData] = useState(null);
   
   // 生成完整牌組 - 固定順序的牌組，所有玩家都用這個順序
   const generateDeck = () => {
@@ -218,6 +224,20 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         setIsFlipping(true);
       }
       
+      // 處理遊戲結束消息
+      if (data.type === "game_over") {
+        console.log("收到遊戲結束消息:", data);
+        setIsGameOver(true);
+        setGameOverData(data.data);
+        // 清除所有遊戲狀態
+        setFlippedCards([]);
+        setIsFlipping(false);
+        setPlayedCard(null);
+        setSelectedCard(null);
+        setChoosingRows([]);
+        setWaitingPlayer(null);
+      }
+      
       // 處理出牌確認 - 其他玩家出牌不會影響我們的手牌
       if (data.type === "card_played") {
         console.log("收到卡牌出牌消息:", data);
@@ -261,17 +281,17 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       if (data.type === "i_choose_row") {
         console.log("我要選則收某排牌", data);
         // 設置需要選擇的列和每列對應的牛頭數
-        const rowBullHeads = [];
-        // 獲取每列的牛頭數
-        for (let i = 0; i < board.length; i++) {
-          let rowBulls = 0;
-          board[i].forEach(card => {
-            if (card && card.bull_heads) {
-              rowBulls += card.bull_heads;
-            }
-          });
-          rowBullHeads.push(rowBulls);
-        }
+        const rowBullHeads = data.bull_heads;
+        // // 獲取每列的牛頭數
+        // for (let i = 0; i < board.length; i++) {
+        //   let rowBulls = 0;
+        //   board[i].forEach(card => {
+        //     if (card && card.bull_heads) {
+        //       rowBulls += card.bull_heads;
+        //     }
+        //   });
+        //   rowBullHeads.push(rowBulls);
+        // }
         setChoosingRows(rowBullHeads);
         // 清除等待狀態
         setWaitingPlayer(null);
@@ -353,7 +373,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         const playerIndex = findMyPlayerIndex();
         socket.send(JSON.stringify({
           type: "request_cards_again",
-          player_index: playerIndex
+          // player_index: playerIndex
         }));
         // }
       }
@@ -760,12 +780,97 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     }
   };
 
+  // 處理返回大廳按鈕
+  const handleBackToLobby = () => {
+    // 關閉 WebSocket 連接
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      // 正常關閉 WebSocket
+      socket.close(1000, "用戶離開遊戲");
+    }
+    
+    // 導航回主頁面
+    navigate('/');
+  };
+
+  // 渲染遊戲結束畫面
+  const renderGameOver = () => {
+    if (!isGameOver || !gameOverData) return null;
+    
+    const { losers, winners, all_players } = gameOverData;
+    const winner = winners[0];
+    const loser = losers[0]; // 這是觸發遊戲結束的玩家
+    const isCurrentUserLoser = loser.id === playerId;
+    
+    return (
+      <div className="game-over-overlay">
+        <div className="game-over-modal">
+          <h2>遊戲結束</h2>
+          <p>
+            {isCurrentUserLoser ? 
+              '您的分數已歸零，遊戲結束！' : 
+              `玩家 ${loser.username} 分數歸零，遊戲結束！`}
+          </p>
+          
+          <div className="loser-section">
+            <h3>🥺 輸家</h3>
+            <div className="loser-info">
+              <span className="player-name">
+                {isCurrentUserLoser ? '您' : loser.username}
+                {isCurrentUserLoser && <span className="self-indicator">（您自己）</span>}
+              </span>
+              <span className="player-score negative-score">{loser.score} 分</span>
+            </div>
+          </div>
+          
+          <div className="winner-section">
+            <h3>🏆 贏家</h3>
+            <div className="winner-info">
+              <span className="player-name">
+                {winner.id === playerId ? '您' : winner.username}
+                {winner.id === playerId && <span className="self-indicator">（您自己）</span>}
+              </span>
+              <span className="player-score">{winner.score} 分</span>
+            </div>
+          </div>
+          
+          <div className="all-players-ranking">
+            <h3>所有玩家排名</h3>
+            <div className="ranking-list">
+              {all_players.map((player, index) => (
+                <div 
+                  key={`rank-${index}`} 
+                  className={`player-rank ${player.score <= 0 ? 'eliminated-player' : ''} ${player.id === playerId ? 'current-player' : ''}`}
+                >
+                  <span className="rank-number">#{index + 1}</span>
+                  <span className="player-name">
+                    {player.id === playerId ? '您' : player.username}
+                    {player.id === playerId && <span className="self-indicator">（您自己）</span>}
+                  </span>
+                  <span className={`player-score ${player.score <= 0 ? 'negative-score' : ''}`}>
+                    {player.score} 分
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <button className="back-to-lobby-btn" onClick={handleBackToLobby}>
+            返回大廳
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (!isPrepared) {
     return null;
   }
 
   return (
     <div className="game-board-container">
+      {/* 遊戲結束覆蓋層 */}
+      {renderGameOver()}
+      
       <div 
         className="game-board" 
         style={{ backgroundImage: "url('/images/2x2_background_table.jpeg')" }}
@@ -792,7 +897,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         <div className="my-hand-row">
           <div className="row-header">我的手牌</div>
           <div className="my-hand-container">
-            {isGameStarted ? (
+            {isGameStarted && !isGameOver ? (
               hand.length > 0 ? (
                 <div className="player-hand">
                   {hand.map((card, index) => (
@@ -818,6 +923,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                   發牌中...
                 </span>
               )
+            ) : isGameOver ? (
+              <span className="empty-hand-message">
+                遊戲已結束
+              </span>
             ) : (
               <span className="empty-hand-message">
                 遊戲開始後將顯示您的牌
@@ -825,7 +934,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
             )}
           </div>
           <div>
-              {selectedCard !== null && (
+              {selectedCard !== null && !isGameOver && (
                 <div className="card-action">
                   <button onClick={confirmPlayCard} className="confirm-play-btn">
                     確認出牌
@@ -840,10 +949,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       </div>
       
       {/* 剩餘牌組顯示 - 移到獨立區塊 */}
-      {isGameStarted && renderRemainingCards()}
+      {isGameStarted && !isGameOver && renderRemainingCards()}
       
       {/* 同步按鈕 */}
-      {isGameStarted && (
+      {isGameStarted && !isGameOver && (
         <div className="sync-button-container" style={{ textAlign: 'center', margin: '10px 0' }}>
           <button 
             onClick={syncRemainingCards}

@@ -42,7 +42,7 @@ daphne -p 8000 take6.asgi:application
 原本這個指令只支援http不支援WebSocket: python manage.py runserver
 
 ## 已經在本地開過之後
-conda activate final_team14
+conda activate final_team14 (其實可能不用)
 
 cd frontend 
 
@@ -91,6 +91,11 @@ daphne -p 8000 take6.asgi:application
     - Run python backend/manage.py migrate
 
 ## 進度
+- 0515 1637 hyc
+    - 可以正常多輪發牌
+    - 小問題
+        - 分數更新比較慢就是了
+
 - 0515 0006 hyc 玩牌v3 可多輪發牌 差結束點
     - 問題
         - GameBoard 353處 這邊重發的時候 findMyPlayerIndex會顯示都是0 我希望可以延續跟前一輪的編號相同
