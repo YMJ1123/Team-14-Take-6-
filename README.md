@@ -91,6 +91,14 @@ daphne -p 8000 take6.asgi:application
     - Run python backend/manage.py migrate
 
 ## 進度
+- 0516 AndyChen
+    - 登入系統
+        - 新增帳戶註冊與登入功能
+        - 讓已登入使用者顯示真實名稱，未登入則使用訪客模式
+        - 優化登入與註冊頁面，使其更符合主畫面風格
+    - 待解決
+        - 目前進入房間後 聊天室和記分板名稱尚未與帳號同步
+
 - 0515 1637 hyc
     - 可以正常多輪發牌
     - 小問題

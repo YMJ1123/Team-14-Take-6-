@@ -22,6 +22,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         if not self.user.is_authenticated:
             guest_id = ''.join(random.choices('0123456789abcdef', k=8))
             self.username = f'訪客_{guest_id}'
+            self.display_name = self.username
+            self.is_guest = True
             
             # 創建臨時訪客用戶並將其保存為 self.user
             await self.create_guest_user(self.username)
@@ -29,11 +31,13 @@ class GameConsumer(AsyncWebsocketConsumer):
             print(f"創建訪客: {self.username}")
         else:
             self.username = self.user.username
+            self.display_name = self.user.username
+            self.is_guest = False
             print(f"已登入用戶: {self.username}")
         
         # 獲取或創建遊戲房間，並將玩家添加到房間
         self.game_room = GameRoom.get_room(self.room_name)
-        self.game_room.add_player(self.user.id)
+        self.game_room.add_player(self.user.id, self.display_name, self.is_guest)
         
         # 加入房間
         room_exists = await self.add_player_to_room()
@@ -55,7 +59,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'user_notification',
-                'message': f'{self.username} 加入了遊戲',
+                'message': f'{self.display_name} 加入了遊戲',
                 'username': "系統"
             }
         )
@@ -64,7 +68,8 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'connection_established',
             'playerId': self.user.id,
-            'message': f'歡迎 {self.username}!'
+            'message': f'歡迎 {self.display_name}!',
+            'isGuest': self.is_guest
         }))
         
         # 更新房間玩家列表
@@ -127,7 +132,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             message_type = data.get('type')
             
             # 獲取用戶名（登入用戶或訪客）
-            username = getattr(self, 'username', None) or (self.user.username if hasattr(self, 'user') and self.user.is_authenticated else None)
+            username = getattr(self, 'display_name', None) or getattr(self, 'username', None) or (self.user.username if hasattr(self, 'user') and self.user.is_authenticated else None)
             
             if message_type == 'request_room_info':
                 # 處理請求房間信息的消息
@@ -498,7 +503,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'card_played',
                 'sender_id': self.user.id,
-                'player_name': player_name,
+                'player_name': self.display_name,
                 'player_username': self.user.username,
                 'card_value': card_value, 
                 'bull_heads': bull_heads, 
@@ -790,11 +795,22 @@ class GameConsumer(AsyncWebsocketConsumer):
             # 格式化玩家數據
             result = []
             for player_obj in players: # Renamed from player to player_obj to avoid conflict
+                # 檢查是否有設定顯示名稱
+                player_id = player_obj.user.id
+                display_name = None
+                is_guest = player_obj.user.username.startswith('訪客_')
+                
+                # 從 GameRoom 獲取顯示名稱（如果有）
+                if hasattr(self, 'game_room') and player_id in self.game_room.player_display_names:
+                    display_name = self.game_room.player_display_names[player_id]['display_name']
+                    is_guest = self.game_room.player_display_names[player_id]['is_guest']
+                
                 result.append({
-                    'id': player_obj.user.id, # 通常前端也需要id
+                    'id': player_id,
                     'username': player_obj.user.username,
+                    'display_name': display_name or player_obj.user.username,
                     'score': player_obj.score or 0,
-                    'is_guest': player_obj.user.username.startswith('訪客_'),
+                    'is_guest': is_guest,
                     'is_ready': player_obj.is_ready  # 包含 is_ready 狀態
                 })
             

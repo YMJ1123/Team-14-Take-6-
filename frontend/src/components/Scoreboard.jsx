@@ -56,7 +56,7 @@ const Scoreboard = ({ socket }) => {
         // 接收玩家準備狀態更新
         setPlayers(prevPlayers => {
           return prevPlayers.map(player => {
-            if (player.username === data.username) {
+            if (player.username === data.username || player.display_name === data.username) {
               return { ...player, is_ready: data.is_ready };
             }
             return player;
@@ -68,7 +68,7 @@ const Scoreboard = ({ socket }) => {
         // 接收分數更新
         setPlayers(prevPlayers => {
           return prevPlayers.map(player => {
-            if (player.username === data.username) {
+            if (player.username === data.username || player.display_name === data.username) {
               return { ...player, score: data.score };
             }
             return player;
@@ -107,8 +107,11 @@ const Scoreboard = ({ socket }) => {
           </thead>
           <tbody>
             {displayPlayers.map((player, index) => (
-              <tr key={index} className={player.username === currentUser ? "current-player" : ""}>
-                <td>{player.username}</td>
+              <tr key={index} className={(player.username === currentUser || player.display_name === currentUser) ? "current-player" : ""}>
+                <td>
+                  {player.display_name || player.username}
+                  {player.is_guest && " (訪客)"}
+                </td>
                 <td>{player.score || 0}</td>
                 <td className={player.is_ready ? "ready" : "not-ready"}>
                   {player.is_ready ? "已準備" : "未準備"}

@@ -34,6 +34,9 @@ urlpatterns = [
     # API 路由：React 將會呼叫這些網址
     path('api/', include(router.urls)),
 
+    # 用戶認證API
+    path('api/auth/', include('users.urls')),
+
     # REST framework 自帶登入 (可選)
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     

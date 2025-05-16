@@ -19,6 +19,8 @@ class GameRoom:
         # 新增：記錄當前處理到哪一張牌
         self.processing_index = 0
         self.cards_to_process = []
+        # 新增：記錄玩家顯示名稱和訪客狀態
+        self.player_display_names = {}  # 格式: {player_id: {'display_name': name, 'is_guest': boolean}}
     
     def initialize_game_state(self, player_count):
         """初始化房間的遊戲狀態（確保只初始化一次）"""
@@ -63,16 +65,27 @@ class GameRoom:
         """檢查房間是否已經初始化了遊戲狀態"""
         return self.game_state is not None
     
-    def add_player(self, user_id):
+    def add_player(self, user_id, display_name=None, is_guest=False):
         """將玩家添加到房間"""
         self.connected_players.add(user_id)
-        print(f"玩家 {user_id} 加入房間 {self.name}，目前玩家數: {len(self.connected_players)}")
+        # 儲存玩家顯示名稱和訪客狀態
+        self.player_display_names[user_id] = {
+            'display_name': display_name or f'Player_{user_id}',
+            'is_guest': is_guest
+        }
+        print(f"玩家 {user_id} ({self.player_display_names[user_id]['display_name']}) 加入房間 {self.name}，目前玩家數: {len(self.connected_players)}")
     
     def remove_player(self, user_id):
         """從房間中移除玩家"""
         if user_id in self.connected_players:
             self.connected_players.remove(user_id)
-            print(f"玩家 {user_id} 離開房間 {self.name}，剩餘玩家數: {len(self.connected_players)}")
+            # 如果有儲存玩家顯示名稱，也一併移除
+            if user_id in self.player_display_names:
+                display_name = self.player_display_names[user_id]['display_name']
+                del self.player_display_names[user_id]
+                print(f"玩家 {user_id} ({display_name}) 離開房間 {self.name}，剩餘玩家數: {len(self.connected_players)}")
+            else:
+                print(f"玩家 {user_id} 離開房間 {self.name}，剩餘玩家數: {len(self.connected_players)}")
             # 如果玩家已出牌，也需要移除
             if user_id in self.played_cards:
                 del self.played_cards[user_id]
@@ -85,7 +98,12 @@ class GameRoom:
         return len(self.connected_players)
     
     def get_player_name(self, player_id):
-        return self.played_cards[player_id]['player_name']
+        """獲取玩家名稱，優先使用設定的顯示名稱"""
+        if player_id in self.player_display_names:
+            return self.player_display_names[player_id]['display_name']
+        elif player_id in self.played_cards and 'player_name' in self.played_cards[player_id]:
+            return self.played_cards[player_id]['player_name']
+        return f'Player_{player_id}'
     
     def record_played_card(self, player_id, card_idx, card_value, player_name):
         """記錄玩家出的牌，同時記錄卡牌索引和值"""

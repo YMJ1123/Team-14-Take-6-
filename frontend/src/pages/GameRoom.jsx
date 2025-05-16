@@ -5,11 +5,13 @@ import GameBoard from '../components/GameBoard';
 import ChatBox from '../components/ChatBox';
 import Scoreboard from '../components/Scoreboard';
 import RemainingCards from '../components/RemainingCards';
+import { useAuth } from '../components/AuthProvider';
 import '../styles/game_room.css';
 
 const GameRoom = () => {
   const { roomName } = useParams();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
@@ -43,6 +45,7 @@ const GameRoom = () => {
     const wsUrl = `${protocol}//${host}/ws/game/${roomName}/`;
     
     console.log(`Attempting to connect to WebSocket: ${wsUrl}`);
+    console.log(`Authentication status: ${isAuthenticated ? 'Logged in as ' + user.username : 'Guest mode'}`);
     
     const ws = new WebSocket(wsUrl);
     
@@ -114,25 +117,25 @@ const GameRoom = () => {
 
   const handleDeleteRoom = () => {
     if (!roomId) {
-      alert("Unable to get room ID, deletion failed");
+      alert("無法獲取房間ID，刪除失敗");
       return;
     }
 
-    if (confirm(`Are you sure you want to delete room "${roomName}"?`)) {
+    if (confirm(`確定要刪除「${roomName}」房間嗎？`)) {
       fetch(`http://127.0.0.1:8000/api/rooms/${roomId}/`, {
         method: 'DELETE',
       })
         .then(res => {
           if (res.ok) {
-            alert("Room successfully deleted");
+            alert("房間已成功刪除");
             navigate('/');
           } else {
-            throw new Error("Failed to delete room");
+            throw new Error("刪除房間失敗");
           }
         })
         .catch(err => {
-          console.error("Error deleting room:", err);
-          alert("Failed to delete room, please try again later");
+          console.error("刪除房間出錯:", err);
+          alert("刪除房間失敗，請稍後再試");
         });
     }
   };
@@ -251,15 +254,19 @@ const GameRoom = () => {
         });
       }
     }
-  };
-
-  return (
+  };      return (
     <div className="container">
       <div className="room-header">
         <h1>
           Take 6! 線上牛頭王 - 遊戲房間: {roomName}
           {isAdmin && <span className="admin-badge" title="你是房主">👑</span>}
         </h1>
+        <div className="user-status">
+          {isAuthenticated ? 
+            <span className="logged-in-status">已登入: {user.username}</span> : 
+            <span className="guest-status">訪客模式: {currentUser}</span>
+          }
+        </div>
         <div className="room-actions">
           <button onClick={toggleMusic} className={isMusicPlaying ? "music-btn playing" : "music-btn"}>
             {isMusicPlaying ? "停止音樂" : "播放音樂"}
