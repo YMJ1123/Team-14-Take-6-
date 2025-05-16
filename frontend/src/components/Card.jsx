@@ -1,7 +1,7 @@
 import React from "react";
 import "../styles/card.css";
 
-const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, isBack = false }) => {
+const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, mediumSize = false, isBack = false }) => {
   // 判斷是否顯示牌背（不再使用 value === "back"）
   const isCardBack = isBack;
   
@@ -22,7 +22,7 @@ const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, 
   // 如果是卡牌背面
   if (isCardBack) {
     return (
-      <div className={`card card-back ${smallSize ? 'card-small' : ''}`} onClick={onClick}>
+      <div className={`card card-back ${smallSize ? 'card-small' : ''} ${mediumSize ? 'card-medium' : ''}`} onClick={onClick}>
         <div className="card-inner">
           <div className="card-design"></div>
         </div>
@@ -32,7 +32,7 @@ const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, 
 
   return (
     <div 
-      className={`card ${getCardColor()} ${isPlayed ? 'played' : ''} ${smallSize ? 'card-small' : ''}`}
+      className={`card ${getCardColor()} ${isPlayed ? 'played' : ''} ${smallSize ? 'card-small' : ''} ${mediumSize ? 'card-medium' : ''}`}
       onClick={onClick}
       style={{ 
         backgroundImage: "url('/images/bull-head-bg.png')",

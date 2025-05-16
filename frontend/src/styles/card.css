@@ -70,6 +70,32 @@
   margin: 0;
 }
 
+.card-medium {
+  /* width: 60px;
+  height: 86px; */
+  width: 70px;
+  height: 100px;
+  border-radius: 7px; /* Scaled from .card's 8px */
+  box-sizing: border-box; /* Ensures padding doesn't add to total height */
+  overflow: hidden; /* Prevents inner content from overflowing */
+}
+
+.card-medium .card-number {
+  font-size: 20px;   /* Scaled from .card's 24px */
+  margin-top: 4px;   /* Scaled from .card's 5px */
+}
+
+.card-medium .bull-heads {
+  padding: 2px;      /* Scaled from .card's 3px */
+  margin-bottom: 4px;/* Scaled from .card's 5px */
+}
+
+.card-medium .bull-head-icon {
+  width: 12px;       /* Scaled from .card's 14px */
+  height: 12px;      /* Scaled from .card's 14px */
+  margin: 1px;       /* Scaled from .card's 1px, rounds to 1px */
+}
+
 .card:not(.played):hover {
   transform: translateY(-5px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);

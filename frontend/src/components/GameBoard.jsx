@@ -468,6 +468,8 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
               value={card.value}
               bullHeads={card.bull_heads}
               isPlayed={true}
+              // smallSize={true}
+              // mediumSize={true}
             />
           ) : null}
         </div>
@@ -528,6 +530,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
               bullHeads={playedCard.bull_heads}
               isBack={false}  // 使用 isBack 屬性來顯示牌背
               isPlayed={true}
+              // mediumSize={true}
             />
             <div className="player-name">我</div>
           </div>
@@ -563,6 +566,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                   bullHeads={1}
                   isBack={true}  // 顯示牌背
                   isPlayed={true}
+                  // mediumSize={true}
                 />
                 <div className="player-name">{displayName}</div>
               </div>
@@ -578,6 +582,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                   value={card.value}
                   bullHeads={card.bull_heads}
                   isPlayed={true}
+                  // mediumSize={true}
                 />
                 <div className="player-name">{card.player_name}</div>
               </div>
