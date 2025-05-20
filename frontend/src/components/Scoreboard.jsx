@@ -3,7 +3,22 @@ import "../styles/scoreboard.css";
 
 const Scoreboard = ({ socket }) => {
   const [players, setPlayers] = useState([]);
-  const [currentUser, setCurrentUser] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // 獲取當前用戶信息
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/auth/current_user/', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.is_authenticated) {
+        setCurrentUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
 
   // 請求更新房間信息的函數
   const requestRoomInfo = () => {
@@ -13,6 +28,9 @@ const Scoreboard = ({ socket }) => {
   };
 
   useEffect(() => {
+    // 獲取當前用戶信息
+    fetchCurrentUser();
+
     if (!socket) return;
 
     // 設置定時更新（每5秒更新一次）
@@ -23,11 +41,6 @@ const Scoreboard = ({ socket }) => {
       console.log("Scoreboard received message:", data);
       
       if (data.type === "connection_established") {
-        // 從連接訊息中獲取自己的用戶名
-        const match = data.message.match(/歡迎\s+(.+?)!/);
-        if (match && match[1]) {
-          setCurrentUser(match[1].trim());
-        }
         // 連接建立後立即請求房間信息
         requestRoomInfo();
       }
@@ -107,10 +120,10 @@ const Scoreboard = ({ socket }) => {
           </thead>
           <tbody>
             {displayPlayers.map((player, index) => (
-              <tr key={index} className={(player.username === currentUser || player.display_name === currentUser) ? "current-player" : ""}>
+              <tr key={index} className={(currentUser && (player.username === currentUser.username || player.display_name === currentUser.username)) ? "current-player" : ""}>
                 <td>
-                  {player.display_name || player.username}
-                  {player.is_guest && " (訪客)"}
+                  {player.username || player.display_name}
+                  {!player.username && " (訪客)"}
                 </td>
                 <td>{player.score || 0}</td>
                 <td className={player.is_ready ? "ready" : "not-ready"}>

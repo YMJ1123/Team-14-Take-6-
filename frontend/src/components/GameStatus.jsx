@@ -50,8 +50,8 @@ const GameStatus = ({ socket }) => {
           {players && players.length > 0 ? (
             players.map((player, index) => (
               <li key={index}>
-                {player.display_name || player.username}
-                {player.is_guest && " (訪客)"}
+                {player.username || player.display_name}
+                {!player.username && " (訪客)"}
                 （分數: {player.score || 0}）
               </li>
             ))

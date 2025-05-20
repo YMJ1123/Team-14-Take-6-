@@ -16,13 +16,24 @@ class GameConsumer(AsyncWebsocketConsumer):
         # 創建一個集合來存儲已經處理過分數扣除的玩家ID
         self.processed_players = set()
         
+        # 從 URL 參數中獲取用戶名和訪客狀態
+        query_string = self.scope.get('query_string', b'').decode()
+        query_params = dict(param.split('=') for param in query_string.split('&') if param)
+        provided_username = query_params.get('username')
+        is_guest_param = query_params.get('is_guest', 'false').lower() == 'true'
+        
+        # 檢查是否提供了用戶名
+        if not provided_username:
+            # 如果沒有提供用戶名，拒絕連接
+            await self.close()
+            return
+            
         await self.accept()
         
-        # 如果用戶未登入，創建臨時訪客用戶
+        # 設置用戶名和顯示名稱
         if not self.user.is_authenticated:
-            guest_id = ''.join(random.choices('0123456789abcdef', k=8))
-            self.username = f'訪客_{guest_id}'
-            self.display_name = self.username
+            self.username = provided_username
+            self.display_name = provided_username
             self.is_guest = True
             
             # 創建臨時訪客用戶並將其保存為 self.user
@@ -30,6 +41,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             
             print(f"創建訪客: {self.username}")
         else:
+            # 已登入用戶使用其實際用戶名
             self.username = self.user.username
             self.display_name = self.user.username
             self.is_guest = False

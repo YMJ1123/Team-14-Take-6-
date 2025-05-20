@@ -30,7 +30,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   // 確認按鈕狀態
   const [showConfirmButton, setShowConfirmButton] = useState(false);
   // 當前用戶名
-  const [currentUser, setCurrentUser] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
   // 新增：用於存儲需要選擇的列和牛頭數
   const [choosingRows, setChoosingRows] = useState([]);
   // 新增：等待選擇的玩家名
@@ -41,6 +41,21 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [isGameOver, setIsGameOver] = useState(false);
   // 遊戲結束數據
   const [gameOverData, setGameOverData] = useState(null);
+  
+  // 獲取當前用戶信息
+  const fetchCurrentUser = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/auth/current_user/', {
+        credentials: 'include'
+      });
+      const data = await response.json();
+      if (data.is_authenticated) {
+        setCurrentUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+    }
+  };
   
   // 生成完整牌組 - 固定順序的牌組，所有玩家都用這個順序
   const generateDeck = () => {
@@ -203,6 +218,9 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
 
   // Socket消息處理
   useEffect(() => {
+    // 獲取當前用戶信息
+    fetchCurrentUser();
+
     if (!socket) return;
 
     const handleMessage = (e) => {
@@ -399,15 +417,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
           setPlayerId(data.playerId);
           console.log(`玩家 ID 已設定為: ${data.playerId}`);
           
-          // 如果有用戶名，也設置它
-          if (data.message) {
-            const match = data.message.match(/歡迎\s+(.+?)!/);
-            if (match && match[1]) {
-              const username = match[1].trim();
-              setCurrentUser(username);
-              console.log(`設定當前用戶名為: ${username}`);
-            }
-          }
+          // 連接建立後立即請求房間信息
+          socket.send(JSON.stringify({
+            type: "get_room_info"
+          }));
         }
       }
       
@@ -552,7 +565,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
           if (card.player_id && players.length > 0) {
             const foundPlayer = players.find(p => p.id === card.player_id);
             if (foundPlayer) {
-              displayName = foundPlayer.username;
+              displayName = foundPlayer.username || foundPlayer.display_name;
+              if (!foundPlayer.username) {
+                displayName += " (訪客)";
+              }
             }
           }
           
@@ -677,7 +693,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       card_idx: selectedCard,
       player_id: playerId,  // 發送自己的 ID
       player_index: myIndex, // 發送自己在房間中的索引
-      player_name: currentUser || "玩家", // 發送玩家名稱
+      player_name: currentUser ? currentUser.username : (players.find(p => p.id === playerId)?.display_name || "訪客"), // 發送玩家名稱
       value: card.value, // 發送牌值
       bull_heads: card.bull_heads // 發送牛頭數
     }));
@@ -803,8 +819,8 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     
     const { losers, winners, all_players } = gameOverData;
     const winner = winners[0];
-    const loser = losers[0]; // 這是觸發遊戲結束的玩家
-    const isCurrentUserLoser = loser.id === playerId;
+    const loser = losers[0];
+    const isCurrentUserLoser = currentUser && loser.id === currentUser.id;
     
     return (
       <div className="game-over-overlay">
@@ -813,15 +829,16 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
           <p>
             {isCurrentUserLoser ? 
               '您的分數已歸零，遊戲結束！' : 
-              `玩家 ${loser.username} 分數歸零，遊戲結束！`}
+              `玩家 ${loser.username || loser.display_name}${!loser.username ? ' (訪客)' : ''} 分數歸零，遊戲結束！`}
           </p>
           
           <div className="loser-section">
             <h3>🥺 輸家</h3>
             <div className="loser-info">
               <span className="player-name">
-                {isCurrentUserLoser ? '您' : loser.username}
+                {isCurrentUserLoser ? '您' : (loser.username || loser.display_name)}
                 {isCurrentUserLoser && <span className="self-indicator">（您自己）</span>}
+                {!isCurrentUserLoser && !loser.username && " (訪客)"}
               </span>
               <span className="player-score negative-score">{loser.score} 分</span>
             </div>
@@ -831,8 +848,9 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
             <h3>🏆 贏家</h3>
             <div className="winner-info">
               <span className="player-name">
-                {winner.id === playerId ? '您' : winner.username}
-                {winner.id === playerId && <span className="self-indicator">（您自己）</span>}
+                {currentUser && winner.id === currentUser.id ? '您' : (winner.username || winner.display_name)}
+                {currentUser && winner.id === currentUser.id && <span className="self-indicator">（您自己）</span>}
+                {!(currentUser && winner.id === currentUser.id) && !winner.username && " (訪客)"}
               </span>
               <span className="player-score">{winner.score} 分</span>
             </div>
@@ -844,12 +862,12 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
               {all_players.map((player, index) => (
                 <div 
                   key={`rank-${index}`} 
-                  className={`player-rank ${player.score <= 0 ? 'eliminated-player' : ''} ${player.id === playerId ? 'current-player' : ''}`}
+                  className={`player-rank ${player.score <= 0 ? 'eliminated-player' : ''} ${currentUser && player.id === currentUser.id ? 'current-player' : ''}`}
                 >
                   <span className="rank-number">#{index + 1}</span>
                   <span className="player-name">
-                    {player.id === playerId ? '您' : player.username}
-                    {player.id === playerId && <span className="self-indicator">（您自己）</span>}
+                    {currentUser && player.id === currentUser.id ? '您' : player.username}
+                    {currentUser && player.id === currentUser.id && <span className="self-indicator">（您自己）</span>}
                   </span>
                   <span className={`player-score ${player.score <= 0 ? 'negative-score' : ''}`}>
                     {player.score} 分

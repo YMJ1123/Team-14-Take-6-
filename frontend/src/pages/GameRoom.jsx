@@ -25,6 +25,151 @@ const GameRoom = () => {
   const gameStartSoundRef = useRef(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [messages, setMessages] = useState([]);
+  const reconnectTimeoutRef = useRef(null);
+  const maxReconnectAttempts = 5;
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+
+  const connectWebSocket = async () => {
+    if (!roomName) return null;
+    
+    // 先獲取用戶資訊
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/auth/current_user/', {
+        credentials: 'include'
+      });
+      const userData = await response.json();
+      
+      console.log("User data from API:", userData);  // 調試輸出
+      
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = '127.0.0.1:8000';
+      let wsUrl = `${protocol}//${host}/ws/game/${roomName}/`;
+      
+      // 檢查是否已登入，有兩種可能的API響應格式
+      let username = null;
+      
+      // 第一種格式：user 物件包含完整的用戶資訊
+      if (userData && userData.user && userData.user.username) {
+        username = userData.user.username;
+      } 
+      // 第二種格式：直接包含 username
+      else if (userData && userData.username) {
+        username = userData.username;
+      }
+      
+      if (username) {
+        wsUrl += `?username=${encodeURIComponent(username)}`;
+        console.log(`已找到用戶名：${username}，準備建立連接: ${wsUrl}`);
+      } else if (isAuthenticated && user && user.username) {
+        // 從 AuthContext 獲取用戶名
+        wsUrl += `?username=${encodeURIComponent(user.username)}`;
+        console.log(`從 Context 獲取用戶名：${user.username}，準備建立連接: ${wsUrl}`);
+      } else {
+        console.error('找不到有效的用戶名，無法建立連接', { userData, isAuthenticated, user });
+        setConnectionError('請先登入後再進入遊戲房間');
+        return null;
+      }
+      
+      console.log(`Attempting to connect to WebSocket: ${wsUrl}`);
+      console.log(`Authentication status: ${isAuthenticated ? 'Logged in as ' + user?.username : 'Guest mode'}`);
+      
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('WebSocket connection successful');
+        setConnected(true);
+        setConnectionError(null);
+        setReconnectAttempts(0);
+        
+        // Auto-play background music
+        if (backgroundMusicRef.current) {
+          backgroundMusicRef.current.volume = 0.3;
+          backgroundMusicRef.current.loop = true;
+          
+          const playPromise = backgroundMusicRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              setIsMusicPlaying(true);
+            }).catch(error => {
+              console.log("Autoplay blocked, requires user interaction:", error);
+              setIsMusicPlaying(false);
+            });
+          }
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setConnectionError('連接到伺服器時出錯，請確認您已登入並且後端伺服器正在運行');
+      };
+      
+      ws.onclose = (event) => {
+        console.log(`WebSocket connection closed: Code ${event.code}, Reason: ${event.reason}`);
+        setConnected(false);
+        
+        // 嘗試重新連接，除非已經達到最大重試次數
+        if (reconnectAttempts < maxReconnectAttempts) {
+          const timeout = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+          console.log(`Attempting to reconnect in ${timeout/1000} seconds...`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            setReconnectAttempts(prev => prev + 1);
+            const newWs = connectWebSocket();
+            if (newWs) setSocket(newWs);
+          }, timeout);
+        } else {
+          setConnectionError('Connection to server lost. Please refresh the page to try again.');
+        }
+      };
+      
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          console.log("Received WebSocket message:", data);
+          
+          if (data.type === "game_started") {
+            setIsGameStarted(true);
+          }
+          if (data.type === "room_info" && data.players) {
+            console.log("收到房間信息，玩家列表:", data.players);
+            setPlayerCount(data.players.length);
+          }
+          if (data.type === "connection_established") {
+            console.log("連接建立消息:", data);
+            // 直接使用消息中的 playerId
+            if (data.playerId) {
+              console.log(`獲得玩家ID: ${data.playerId}`);
+            }
+            
+            // 從歡迎消息中提取用戶名
+            if (data.message) {
+              const match = data.message.match(/歡迎\s+(.+?)!/);
+              if (match && match[1]) {
+                setCurrentUser(match[1].trim());
+                console.log(`設置當前用戶為: ${match[1].trim()}`);
+              }
+            }
+          }
+          if (data.type === "error") {
+            console.error("從服務器收到錯誤:", data.message);
+            setConnectionError(data.message);
+          }
+          if (data.type === "user_notification") {
+            console.log("用戶通知:", data);
+            setMessages(prev => [...prev, { username: data.username, message: data.message }]);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
+      
+      return ws;
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setConnectionError(`獲取用戶資訊時出錯: ${error.message}`);
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (!roomName) return;
@@ -39,70 +184,23 @@ const GameRoom = () => {
       })
       .catch(err => console.error("Failed to get room ID:", err));
     
-    // WebSocket connection
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = '127.0.0.1:8000';
-    const wsUrl = `${protocol}//${host}/ws/game/${roomName}/`;
-    
-    console.log(`Attempting to connect to WebSocket: ${wsUrl}`);
-    console.log(`Authentication status: ${isAuthenticated ? 'Logged in as ' + user.username : 'Guest mode'}`);
-    
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      console.log('WebSocket connection successful');
-      setConnected(true);
-      setConnectionError(null);
-      
-      // Auto-play background music
-      if (backgroundMusicRef.current) {
-        backgroundMusicRef.current.volume = 0.3;
-        backgroundMusicRef.current.loop = true;
-        
-        const playPromise = backgroundMusicRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            setIsMusicPlaying(true);
-          }).catch(error => {
-            console.log("Autoplay blocked, requires user interaction:", error);
-            setIsMusicPlaying(false);
-          });
-        }
-      }
-    };
-    
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setConnectionError('Error connecting to server, please check if the backend server is running correctly with daphne');
-    };
-    
-    ws.onclose = (event) => {
-      console.log(`WebSocket connection closed: Code ${event.code}, Reason: ${event.reason}`);
-      setConnected(false);
-      if (!connectionError) {
-        setConnectionError('Connection to server closed, please refresh to try again');
-      }
-    };
-    
-    // 可能要改變IsGameStarted的狀態 hyc
-    ws.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      if (data.type === "game_started") {
-        setIsGameStarted(true);
-      }
-      if (data.type === "room_info" && data.players) {
-        setPlayerCount(data.players.length);
-      }
-    };
-    
-    setSocket(ws);
+    // 初始化 WebSocket 連接
+    connectWebSocket().then(ws => {
+      if (ws) setSocket(ws);
+    });
     
     return () => {
-      if (ws && ws.readyState <= 1) {
-        ws.close();
+      // 清理重連計時器
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
       }
       
-      // Stop all music when leaving page
+      // 關閉 WebSocket 連接
+      if (socket && socket.readyState <= 1) {
+        socket.close(1000, "Component unmounting");
+      }
+      
+      // 停止所有音樂
       if (backgroundMusicRef.current) {
         backgroundMusicRef.current.pause();
         backgroundMusicRef.current.currentTime = 0;
@@ -113,7 +211,7 @@ const GameRoom = () => {
         gameStartSoundRef.current.currentTime = 0;
       }
     };
-  }, [roomName]);
+  }, [roomName, reconnectAttempts]);
 
   const handleDeleteRoom = () => {
     if (!roomId) {
@@ -254,7 +352,9 @@ const GameRoom = () => {
         });
       }
     }
-  };      return (
+  };
+
+  return (
     <div className="container">
       <div className="room-header">
         <h1>
@@ -354,6 +454,7 @@ const GameRoom = () => {
               <p>{connectionError}</p>
               <p>請確認以下事項：</p>
               <ol>
+                <li>您已經成功登入（目前用戶：{isAuthenticated ? user?.username : '未登入'}）</li>
                 <li>Django 後端伺服器是否已啟動（使用 daphne 命令）</li>
                 <li>伺服器是否運行在 127.0.0.1:8000 上</li>
                 <li>伺服器的 CORS 設定是否正確</li>
