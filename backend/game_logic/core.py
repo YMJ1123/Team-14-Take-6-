@@ -84,12 +84,13 @@ class GameState:
         
         return closest_row
     
-    def play_card(self, player_idx, card_idx):
+    def play_card(self, player_idx, card_idx, external_card_value=None):
         """玩家出牌
         
         參數:
             player_idx: 玩家索引
             card_idx: 玩家手牌中的卡牌索引
+            external_card_value: 外部指定的卡片值(可選)，用於確保與前端一致
             
         返回:
             dict: 含有操作結果的字典
@@ -106,6 +107,21 @@ class GameState:
         
         # 取出玩家選擇的卡牌
         card = player_hand.pop(card_idx)
+        original_value = card.value
+        
+        # 如果提供了外部卡片值，則替換卡片值
+        if external_card_value is not None:
+            # 記錄原始卡片值用於調試
+            if original_value != external_card_value:
+                print(f"警告: 替換卡片值，原始值:{original_value} -> 外部值:{external_card_value}")
+                # 創建新的卡片物件，使用前端提供的值
+                new_card = Card(external_card_value)
+                new_card.owner = card.owner
+                new_card.bull_heads = card.bull_heads  # 保留原始牛頭數
+                card = new_card
+        
+        # 記錄最終使用的卡片值
+        final_card_value = external_card_value if external_card_value is not None else original_value
         
         # 找到最接近的行
         row_idx = self.find_closest_row(card)
@@ -121,14 +137,15 @@ class GameState:
         else:
             # 如果該行已有5張牌，則收集牛頭
             if len(self.board_rows[row_idx]) == 5:
-                collected_bull_heads = sum(card.bull_heads for card in self.board_rows[row_idx])
+                collected_bull_heads = sum(c.bull_heads for c in self.board_rows[row_idx])
                 self.board_rows[row_idx] = [card]
                 return {
                     'player_id': player_idx,
                     'action': 'collect',
                     'row': row_idx,
                     'bull_heads': collected_bull_heads,
-                    'card': {'value': card.value, 'bull_heads': card.bull_heads}
+                    'card': {'value': final_card_value, 'bull_heads': card.bull_heads},
+                    'actual_card_value': final_card_value  # 確保前端收到的是正確的值
                 }
             else:
                 self.board_rows[row_idx].append(card)
@@ -136,16 +153,18 @@ class GameState:
                     'player_id': player_idx,
                     'action': 'place',
                     'row': row_idx,
-                    'card': {'value': card.value, 'bull_heads': card.bull_heads}
+                    'card': {'value': final_card_value, 'bull_heads': card.bull_heads},
+                    'actual_card_value': final_card_value  # 確保前端收到的是正確的值
                 }
 
-    def resume_from_choose_row(self, player_idx, card_idx, row_idx):
+    def resume_from_choose_row(self, player_idx, card_idx, row_idx, external_card_value=None):
         """處理玩家選擇的列
         
         參數:
             player_idx: 玩家索引
             card_idx: 玩家手牌中的卡牌索引
             row_idx: 玩家選擇的列索引
+            external_card_value: 外部指定的卡片值(可選)，用於確保與前端一致
             
         返回:
             dict: 含有操作結果的字典
@@ -163,9 +182,24 @@ class GameState:
         
         # 取出玩家選擇的卡牌
         card = player_hand.pop(card_idx)
+        original_value = card.value
+        
+        # 如果提供了外部卡片值，則替換卡片值
+        if external_card_value is not None:
+            # 記錄原始卡片值用於調試
+            if original_value != external_card_value:
+                print(f"警告: 選擇列時替換卡片值，原始值:{original_value} -> 外部值:{external_card_value}")
+                # 創建新的卡片物件，使用前端提供的值
+                new_card = Card(external_card_value)
+                new_card.owner = card.owner
+                new_card.bull_heads = card.bull_heads  # 保留原始牛頭數
+                card = new_card
+                
+        # 記錄最終使用的卡片值
+        final_card_value = external_card_value if external_card_value is not None else original_value
         
         # 收集牛頭
-        collected_bull_heads = sum(card.bull_heads for card in self.board_rows[row_idx])
+        collected_bull_heads = sum(c.bull_heads for c in self.board_rows[row_idx])
         
         # 清空該行並放入新牌
         self.board_rows[row_idx] = [card]
@@ -175,7 +209,8 @@ class GameState:
             'action': 'collect',
             'row': row_idx,
             'bull_heads': collected_bull_heads,
-            'card': {'value': card.value, 'bull_heads': card.bull_heads}
+            'card': {'value': final_card_value, 'bull_heads': card.bull_heads},
+            'actual_card_value': final_card_value  # 確保前端收到的是正確的值
         }
     def play_round(self):
         """同時讓四位玩家出牌並依照卡牌數字排序"""

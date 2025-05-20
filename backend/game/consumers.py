@@ -284,10 +284,14 @@ class GameConsumer(AsyncWebsocketConsumer):
             elif message_type == 'play_card':
                 # 玩家出牌
                 card_idx = data.get('card_idx')
-                # player_id = data.get('player_id')
                 card_value = data.get('value', 0)
                 bull_heads = data.get('bull_heads', 0)
                 player_name = data.get('player_name', username)
+                
+                # 記錄日誌以便調試
+                print(f"接收到出牌請求: 玩家ID={self.user.id}, 用戶名={self.user.username}, 顯示名={player_name}, 卡片索引={card_idx}")
+                
+                # 始終使用當前連接的用戶ID作為玩家識別，而不是前端傳來的值
                 await self.handle_play_card(card_idx, card_value, bull_heads, player_name)
             
             # 處理玩家選擇列的消息
@@ -506,17 +510,40 @@ class GameConsumer(AsyncWebsocketConsumer):
             }))
             return
         
-        # 記錄玩家出牌 (使用self.user.id作為玩家ID)
-        all_played = self.game_room.record_played_card(self.user.id, card_idx, card_value, player_name)
+        # 使用self.user.id作為玩家唯一識別符，這是資料庫中的用戶ID
+        player_id = self.user.id
+        
+        # 添加詳細的日誌記錄
+        print(f"處理出牌請求: 玩家ID={player_id}, 玩家名稱={player_name}, 卡片索引={card_idx}, 卡片值={card_value}")
+        
+        # 獲取玩家在遊戲中的索引
+        player_index = await self.get_player_index()
+        if player_index is not None:
+            print(f"玩家 {player_id} 在遊戲中的索引為 {player_index}")
+            # 檢查玩家手牌
+            if player_index < len(self.game_room.game_state.player_hands):
+                player_hand = self.game_room.game_state.player_hands[player_index]
+                # 驗證卡片索引
+                if 0 <= card_idx < len(player_hand):
+                    actual_card = player_hand[card_idx]
+                    print(f"玩家手牌中索引 {card_idx} 的卡片是: 值={actual_card.value}, 牛頭數={actual_card.bull_heads}")
+                    # 驗證卡片值
+                    if actual_card.value != card_value:
+                        print(f"警告: 前端傳來的卡片值 ({card_value}) 與後端手牌實際值 ({actual_card.value}) 不一致")
+        
+        # 記錄玩家出牌 (使用用戶ID而不是前端傳來的player_id)
+        all_played = self.game_room.record_played_card(player_id, card_idx, card_value, player_name)
+        
+        print(f"記錄玩家出牌: 玩家ID={player_id}, 用戶名={self.user.username}, 顯示名={player_name}, 卡片值={card_value}")
         
         # 通知其他玩家有人出牌(不顯示是哪張牌)
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'card_played',
-                'sender_id': self.user.id,
-                'player_name': self.display_name,
-                'player_username': self.user.username,
+                'sender_id': player_id, # 使用正確的用戶ID
+                'player_name': player_name, # 使用前端提供的顯示名
+                'player_username': self.user.username, # 資料庫中的用戶名
                 'card_value': card_value, 
                 'bull_heads': bull_heads, 
                 'player_idx': await self.get_player_index()
@@ -672,10 +699,32 @@ class GameConsumer(AsyncWebsocketConsumer):
     
     async def round_completed(self, event):
         """處理一輪出牌結束後的結果廣播"""
-        # 不需要在這裡再次處理分數更新，因為已經在 handle_play_card 和 choose_row_response 中處理過了
+        # 如果結果包含卡片信息，確保使用原始卡片值
+        results = event.get('results', [])
+        if results and isinstance(results, list):
+            for result_item in results:
+                if isinstance(result_item, dict) and 'result' in result_item:
+                    # 如果結果中有卡片資訊，且有記錄原始卡片值
+                    if 'result' in result_item and result_item['result'] and 'card' in result_item['result']:
+                        # 優先使用actual_card_value（外部指定的值）
+                        if 'actual_card_value' in result_item['result']:
+                            actual_value = result_item['result']['actual_card_value']
+                            # 更新卡片值為前端傳來的值
+                            result_item['result']['card']['value'] = actual_value
+                            # 清理掉临时字段，避免前端处理混淆
+                            del result_item['result']['actual_card_value']
+                        # 向后兼容：如果有original_card_value，也使用它
+                        elif 'original_card_value' in result_item['result']:
+                            original_value = result_item['result']['original_card_value']
+                            # 更新卡片值為前端傳來的值
+                            result_item['result']['card']['value'] = original_value
+                            # 清理掉临时字段，避免前端处理混淆
+                            del result_item['result']['original_card_value']
+                    
+        # 發送更新後的結果
         await self.send(text_data=json.dumps({
             'type': 'round_completed',
-            'results': event['results'],
+            'results': results,
             'board': event['board']
         }))
     

@@ -42,18 +42,24 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   // 遊戲結束數據
   const [gameOverData, setGameOverData] = useState(null);
   
-  // 獲取當前用戶信息
+  // 獲取當前登入用戶資訊
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/current_user/', {
-        credentials: 'include'
-      });
-      const data = await response.json();
-      if (data.is_authenticated) {
-        setCurrentUser(data.user);
+      const response = await fetch('/api/current-user/');
+      if (response.ok) {
+        const userData = await response.json();
+        console.log("獲取到當前用戶資訊:", userData);
+        setCurrentUser(userData);
+        // 如果有用戶ID，設置playerId
+        if (userData && userData.id) {
+          setPlayerId(userData.id);
+          console.log(`從用戶資訊設定玩家ID: ${userData.id}`);
+        }
+      } else {
+        console.error("獲取當前用戶資訊失敗:", response.status);
       }
     } catch (error) {
-      console.error('Error fetching current user:', error);
+      console.error("獲取當前用戶信息時出錯:", error);
     }
   };
   
@@ -687,13 +693,26 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     const myIndex = findMyPlayerIndex();
     console.log(`出牌時我的房間索引是: ${myIndex}`);
     
+    // 準備玩家名稱 - 優先使用當前登入用戶名
+    let playerName = "訪客";
+    if (currentUser && currentUser.username) {
+      playerName = currentUser.username;
+    } else if (players.length > 0 && playerId) {
+      const playerInfo = players.find(p => p.id === playerId);
+      if (playerInfo) {
+        playerName = playerInfo.username || playerInfo.display_name || "訪客";
+      }
+    }
+    
+    console.log(`出牌玩家資訊: ID=${playerId}, 名稱=${playerName}, 索引=${myIndex}`);
+    
     // 發送出牌信息到服務器
     socket.send(JSON.stringify({
       type: "play_card",
       card_idx: selectedCard,
       player_id: playerId,  // 發送自己的 ID
       player_index: myIndex, // 發送自己在房間中的索引
-      player_name: currentUser ? currentUser.username : (players.find(p => p.id === playerId)?.display_name || "訪客"), // 發送玩家名稱
+      player_name: playerName, // 使用準備好的玩家名稱
       value: card.value, // 發送牌值
       bull_heads: card.bull_heads // 發送牛頭數
     }));

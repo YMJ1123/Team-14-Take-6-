@@ -34,24 +34,43 @@ class GameRoom:
         return self.game_state
     
     def _initialize_player_indices(self):
-        """初始化玩家索引，將當前連接的玩家按順序分配索引"""
+        """初始化玩家ID到遊戲索引的映射"""
+        # 如果已連接玩家列表為空，不執行操作
+        if not self.connected_players:
+            print("警告: 初始化玩家索引時連接玩家列表為空")
+            return
+            
+        print(f"初始化玩家索引映射，當前連接玩家: {self.connected_players}")
+        
+        # 重置映射
         self.player_indices = OrderedDict()
-        for idx, player_id in enumerate(sorted(self.connected_players)):
-            self.player_indices[player_id] = idx
-        print(f"已初始化玩家索引映射: {self.player_indices}")
+        
+        # 將連接的玩家按加入順序映射到索引
+        for idx, player_id in enumerate(self.connected_players):
+            # 轉換為字符串確保一致性
+            self.player_indices[str(player_id)] = idx
+        
+        print(f"玩家索引映射已更新: {self.player_indices}")
     
     def get_player_index(self, player_id):
-        """獲取玩家在房間中的索引"""
+        """獲取玩家在遊戲中的索引"""
+        # 確保player_id是字符串形式
+        player_id = str(player_id)
+        
+        # 檢查映射是否存在
+        if player_id in self.player_indices:
+            idx = self.player_indices[player_id]
+            print(f"玩家 {player_id} 的遊戲索引是 {idx}")
+            return idx
+        
+        # 嘗試初始化玩家索引映射
+        self._initialize_player_indices()
+        
+        # 再次檢查
         if player_id in self.player_indices:
             return self.player_indices[player_id]
-        
-        # 如果玩家不在映射中（例如，遊戲開始後加入的玩家），為其分配一個新索引
-        if len(self.player_indices) < len(self.connected_players):
-            new_index = len(self.player_indices)
-            self.player_indices[player_id] = new_index
-            return new_index
-        
-        # 如果無法分配索引，返回None
+            
+        print(f"警告: 無法找到玩家 {player_id} 的索引，當前映射: {self.player_indices}")
         return None
     
     def get_player_by_index(self, index):
@@ -107,12 +126,27 @@ class GameRoom:
     
     def record_played_card(self, player_id, card_idx, card_value, player_name):
         """記錄玩家出的牌，同時記錄卡牌索引和值"""
+        # 先檢查player_id是否是有效的數字或字符串(避免None或其他類型)
+        if player_id is None:
+            print(f"錯誤: 記錄出牌時收到無效的player_id: {player_id}")
+            return False
+            
+        # 確保player_id是字符串形式，便於一致比較
+        player_id = str(player_id)
+        
+        # 記錄出牌信息
         self.played_cards[player_id] = {
             'value': card_value,
             'idx': card_idx,
             'player_name': player_name
         }
-        print(f"玩家 {player_id}也就是{player_name}在房間 {self.name} 中出了數字 {card_value}，索引 {card_idx}")
+        print(f"玩家 {player_id}({player_name})在房間 {self.name} 中出了數字 {card_value}，索引 {card_idx}")
+        
+        # 確保該玩家已加入到player_indices中
+        if player_id not in self.player_indices:
+            print(f"添加玩家 {player_id} 到索引映射")
+            self._initialize_player_indices()
+        
         return self.are_all_players_played()
     
     def are_all_players_played(self):
@@ -137,15 +171,17 @@ class GameRoom:
         
         # 收集所有玩家的出牌信息，包括卡牌值
         self.cards_to_process = []
-        print("self.played_cards: ", self.played_cards)
+        print("處理已出牌: ", self.played_cards)
         
         for player_id, card_info in self.played_cards.items():
             # 獲取玩家在遊戲中的索引
             player_index = self.get_player_index(player_id)
             
             if player_index is None:
-                print(f"警告: 無法找到玩家 {player_id} 的索引")
+                print(f"警告: 無法找到玩家 {player_id} 的索引，跳過處理")
                 continue
+            
+            print(f"處理玩家 {player_id}({card_info['player_name']}) 的牌，遊戲索引為 {player_index}")
             
             self.cards_to_process.append({
                 'player_id': player_id,
@@ -192,9 +228,34 @@ class GameRoom:
             # 處理下一張卡牌
             return self.process_next_card()
         
+        # 檢查遊戲狀態中是否存在這個玩家的手牌
+        has_valid_hand = (player_index < len(self.game_state.player_hands))
+        
+        # 確保手牌中卡牌索引是有效的
+        has_valid_card_index = False
+        if has_valid_hand:
+            has_valid_card_index = (card_idx < len(self.game_state.player_hands[player_index]))
+        
+        # 記錄實際卡牌值用於結果比對和調試
+        actual_card_value = None
+        if has_valid_hand and has_valid_card_index:
+            actual_card = self.game_state.player_hands[player_index][card_idx]
+            actual_card_value = actual_card.value
+            # 如果卡牌值不匹配，記錄警告
+            if actual_card_value != card_value:
+                print(f"警告: 玩家 {player_id}({player_name}) 請求出牌值 {card_value}，但手牌索引 {card_idx} 的實際值為 {actual_card_value}")
+        
         # 調用遊戲邏輯處理出牌，使用玩家索引而不是絕對ID
-        result = self.game_state.play_card(player_index, card_idx)
+        result = self.game_state.play_card(player_index, card_idx, external_card_value=card_value)
         print(f"玩家 {player_id}({player_name}) (索引 {player_index}) 出牌 {card_value} (索引 {card_idx}) 結果: {result}")
+        
+        # 檢查結果中的卡片值是否符合預期
+        if result and 'card' in result:
+            actual_value = result['card']['value']
+            if actual_value != card_value:
+                print(f"警告: 結果中的卡片值 {actual_value} 與預期值 {card_value} 不符")
+            else:
+                print(f"結果中的卡片值符合預期: {actual_value}")
         
         # 如果需要選擇列
         if result and result.get('action') == 'choose_row':
@@ -261,9 +322,19 @@ class GameRoom:
         choice_info = self.pending_choices[player_id]
         player_index = choice_info['player_index']
         card_idx = choice_info['card_idx']
+        card_value = choice_info['card_value']  # 獲取前端傳來的卡片值
         
         # 從游戲邏輯獲取結果
-        result = self.game_state.resume_from_choose_row(player_index, card_idx, row_idx)
+        print(f"處理玩家 {player_id} 選擇第 {row_idx} 列，使用卡片值 {card_value}")
+        result = self.game_state.resume_from_choose_row(player_index, card_idx, row_idx, external_card_value=card_value)
+        
+        # 檢查結果中的卡片值是否符合預期
+        if result and 'card' in result:
+            actual_value = result['card']['value']
+            if actual_value != card_value:
+                print(f"警告: 選擇列結果中的卡片值 {actual_value} 與預期值 {card_value} 不符")
+            else:
+                print(f"選擇列結果中的卡片值符合預期: {actual_value}")
         
         # 從待處理列表中移除
         del self.pending_choices[player_id]
@@ -272,7 +343,7 @@ class GameRoom:
         result_item = {
             'player_id': player_id,
             'player_index': player_index,
-            'card_value': choice_info['card_value'],
+            'card_value': card_value,
             'card_idx': card_idx,
             'result': result
         }
