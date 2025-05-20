@@ -162,3 +162,7 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# 確保 session cookie 是正確跨域設置
+SESSION_COOKIE_SAMESITE = "Lax"  # 或 "None"（但需 HTTPS）
+SESSION_COOKIE_SECURE = False    # 本地測試時設為 False

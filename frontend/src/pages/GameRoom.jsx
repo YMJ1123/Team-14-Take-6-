@@ -8,6 +8,12 @@ import RemainingCards from '../components/RemainingCards';
 import { useAuth } from '../components/AuthProvider';
 import '../styles/game_room.css';
 
+function getCookie(name) {
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
 const GameRoom = () => {
   const { roomName } = useParams();
   const navigate = useNavigate();
@@ -47,7 +53,10 @@ const GameRoom = () => {
     console.log(`Attempting to connect to WebSocket: ${wsUrl}`);
     console.log(`Authentication status: ${isAuthenticated ? 'Logged in as ' + user.username : 'Guest mode'}`);
     
-    const ws = new WebSocket(wsUrl);
+    // const ws = new WebSocket(wsUrl);
+    const sessionid = getCookie('sessionid');
+    const wsUrl_new = `ws://127.0.0.1:8000/ws/game/${roomName}/`;
+    const ws = new WebSocket(wsUrl_new);
     
     ws.onopen = () => {
       console.log('WebSocket connection successful');

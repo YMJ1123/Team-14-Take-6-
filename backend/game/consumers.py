@@ -10,6 +10,7 @@ from .game_room import GameRoom  # 導入 GameRoom 類
 
 class GameConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        print("User in scope:", self.scope["user"])
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f'game_{self.room_name}'
         self.user = self.scope["user"]
