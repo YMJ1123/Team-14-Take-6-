@@ -5,15 +5,20 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
+from users.csrf import ensure_csrf_cookie
 
+
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        # 不用這個驗證（由 middleware 驗證就好）
+        return
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@csrf_exempt  # 開發階段暫時禁用CSRF驗證以解決問題
+# @csrf_exempt  # 開發階段暫時禁用CSRF驗證以解決問題
 def register_user(request):
     """註冊新用戶"""
     print("接收到註冊請求:", request.data)
@@ -65,7 +70,7 @@ def register_user(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-@csrf_exempt  # 開發階段暫時禁用CSRF驗證以解決問題
+# @csrf_exempt  # 開發階段暫時禁用CSRF驗證以解決問題
 def login_user(request):
     """登入用戶"""
     print("接收到登入請求:", request.data)
@@ -93,7 +98,9 @@ def login_user(request):
 
 
 @api_view(['POST'])
-@csrf_exempt  # 開發階段暫時禁用CSRF驗證以解決問題
+@permission_classes([IsAuthenticated])
+@authentication_classes([CsrfExemptSessionAuthentication])
+# @csrf_exempt  # 開發階段暫時禁用CSRF驗證以解決問題
 def logout_user(request):
     """登出用戶"""
     logout(request)
@@ -101,6 +108,8 @@ def logout_user(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+@ensure_csrf_cookie
 def get_current_user(request):
     """獲取當前已登入用戶信息"""
     if request.user.is_authenticated:

@@ -149,7 +149,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #     "http://127.0.0.1:5173",
 #     "https://your-frontend-url.com",
 # ]  # 若前端網站改變 要改這裡
-CORS_ALLOW_ALL_ORIGINS = True  # ✅ 暫時允許所有
+# CORS_ALLOW_ALL_ORIGINS = True  # ✅ 暫時允許所有
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 CORS_ALLOW_CREDENTIALS = True  # ✅ 允許跨域請求附帶認證信息（cookies）
 CORS_ALLOW_HEADERS = [
     "accept",
@@ -162,3 +166,5 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = False
