@@ -22,31 +22,31 @@ class GameRoom:
         # 新增：記錄玩家顯示名稱和訪客狀態
         self.player_display_names = {}  # 格式: {player_id: {'display_name': name, 'is_guest': boolean}}
     
-    def initialize_game_state(self, player_count):
+    def initialize_game_state(self, player_count, ordered_player_ids):
         """初始化房間的遊戲狀態（確保只初始化一次）"""
         if self.game_state is None:
             print(f"房間 {self.name} 初始化 GameState，玩家數: {player_count}")
             self.game_state = GameState(player_count)
             self.played_cards = {}  # 重置已出牌記錄
             self.round_results = []  # 重置回合結果
-            # 初始化玩家索引的順序，這需要在遊戲開始時確定並固定
-            self._initialize_player_indices()
+            # 使用傳入的有序玩家ID列表初始化玩家索引
+            self._initialize_player_indices(ordered_player_ids)
         return self.game_state
     
-    def _initialize_player_indices(self):
-        """初始化玩家ID到遊戲索引的映射"""
-        # 如果已連接玩家列表為空，不執行操作
-        if not self.connected_players:
-            print("警告: 初始化玩家索引時連接玩家列表為空")
+    def _initialize_player_indices(self, ordered_player_ids):
+        """使用有序的玩家ID列表初始化玩家ID到遊戲索引的映射"""
+        if not ordered_player_ids:
+            print("警告: 初始化玩家索引時，有序的玩家ID列表為空")
+            self.player_indices = OrderedDict()
             return
             
-        print(f"初始化玩家索引映射，當前連接玩家: {self.connected_players}")
+        print(f"初始化玩家索引映射，基於有序列表: {ordered_player_ids}")
         
         # 重置映射
         self.player_indices = OrderedDict()
         
-        # 將連接的玩家按加入順序映射到索引
-        for idx, player_id in enumerate(self.connected_players):
+        # 將連接的玩家按傳入的順序映射到索引
+        for idx, player_id in enumerate(ordered_player_ids):
             # 轉換為字符串確保一致性
             self.player_indices[str(player_id)] = idx
         

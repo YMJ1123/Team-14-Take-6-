@@ -451,9 +451,9 @@ class GameConsumer(AsyncWebsocketConsumer):
             }))
             return
         
-        # 獲取房間玩家列表
-        players = await self.get_room_players()
-        player_count = len(players)
+        # 獲取房間玩家列表（確保按加入順序排序）
+        room_players_db = await self.get_room_players_sorted() # 新方法，用於獲取排序後的玩家信息
+        player_count = len(room_players_db)
         
         if player_count < 2:
             await self.send(text_data=json.dumps({
@@ -462,8 +462,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             }))
             return
         
-        # 使用共享的 GameRoom 初始化遊戲狀態
-        game_state = self.game_room.initialize_game_state(player_count)
+        # 提取有序的玩家ID列表
+        ordered_player_ids = [player['id'] for player in room_players_db]
+        print(f"遊戲開始，有序玩家ID列表: {ordered_player_ids}")
+        
+        # 使用共享的 GameRoom 初始化遊戲狀態，並傳入有序玩家ID列表
+        game_state = self.game_room.initialize_game_state(player_count, ordered_player_ids)
         
         # 發送初始牌桌狀態給所有玩家
         initial_board = []
@@ -1084,3 +1088,42 @@ class GameConsumer(AsyncWebsocketConsumer):
             'type': 'request_new_cards',
             'message': '請點擊取得新手牌'
         }))
+
+    @database_sync_to_async
+    def get_room_players_sorted(self):
+        from .models import Room, GameSession, Player
+        """獲取房間內所有玩家的資訊，並按加入時間排序"""
+        try:
+            room = Room.objects.get(name=self.room_name)
+            game_session = GameSession.objects.filter(room=room, active=True).first()
+            if not game_session:
+                return []
+            
+            # 獲取所有玩家，並按 joined_at 排序
+            players_queryset = Player.objects.filter(game=game_session).select_related('user').order_by('joined_at')
+            
+            result = []
+            for player_obj in players_queryset:
+                player_id = player_obj.user.id
+                display_name = None
+                is_guest = player_obj.user.username.startswith('訪客_')
+                
+                if hasattr(self, 'game_room') and player_id in self.game_room.player_display_names:
+                    display_name = self.game_room.player_display_names[player_id]['display_name']
+                    is_guest = self.game_room.player_display_names[player_id]['is_guest']
+                
+                result.append({
+                    'id': player_id,
+                    'username': player_obj.user.username,
+                    'display_name': display_name or player_obj.user.username,
+                    'score': player_obj.score or 0,
+                    'is_guest': is_guest,
+                    'is_ready': player_obj.is_ready
+                })
+            return result
+        except Room.DoesNotExist:
+            print(f"Error getting sorted room players: Room {self.room_name} does not exist.")
+            return []
+        except Exception as e:
+            print(f"獲取排序後的房間玩家時出錯: {str(e)}")
+            return []
