@@ -563,54 +563,39 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         // 檢查這張牌是否來自其他玩家（不是自己）
         const isFromOtherPlayer = card.isOtherPlayer;
         
-        if (isFromOtherPlayer) {
-          // 嘗試從玩家列表查找正確的用戶名
-          let displayName = card.player_name;
-          
-          // 如果有player_id，優先使用玩家列表中的username
-          if (card.player_id && players.length > 0) {
-            const foundPlayer = players.find(p => p.id === card.player_id);
-            if (foundPlayer) {
-              displayName = foundPlayer.username || foundPlayer.display_name;
-              if (!foundPlayer.username) {
-                displayName += " (訪客)";
-              }
+        // 嘗試從玩家列表查找正確的用戶名
+        let displayName = card.player_name;
+        
+        // 如果有player_id，優先使用玩家列表中的username
+        if (card.player_id && players.length > 0) {
+          const foundPlayer = players.find(p => p.id === card.player_id);
+          if (foundPlayer) {
+            displayName = foundPlayer.username || foundPlayer.display_name;
+            if (!foundPlayer.username) {
+              displayName += " (訪客)";
             }
           }
-          
-          // 添加其他玩家的牌（背面）
-          allCards.push({
-            key: `other-player-${index}`,
-            element: (
-              <div className="flipped-card">
-                <Card
-                  value={1}  // 給一個默認值
-                  bullHeads={1}
-                  isBack={true}  // 顯示牌背
-                  isPlayed={true}
-                  // mediumSize={true}
-                />
-                <div className="player-name">{displayName}</div>
-              </div>
-            )
-          });
-        } else {
-          // 正常顯示已翻開的牌
-          allCards.push({
-            key: `flipped-${index}`,
-            element: (
-              <div className="flipped-card">
-                <Card
-                  value={card.value}
-                  bullHeads={card.bull_heads}
-                  isPlayed={true}
-                  // mediumSize={true}
-                />
-                <div className="player-name">{card.player_name}</div>
-              </div>
-            )
-          });
         }
+        
+        // 當收到 i_choose_row 或 wait_choose_card 消息時，所有牌都顯示正面
+        const shouldShowFaceUp = choosingRows.length > 0 || waitingPlayer !== null;
+        
+        // 添加其他玩家的牌
+        allCards.push({
+          key: `other-player-${index}`,
+          element: (
+            <div className="flipped-card">
+              <Card
+                value={shouldShowFaceUp ? card.value : 1}  // 如果應該顯示正面，則使用實際值
+                bullHeads={shouldShowFaceUp ? card.bull_heads : 1}
+                isBack={!shouldShowFaceUp && isFromOtherPlayer}  // 根據條件決定是否顯示牌背
+                isPlayed={true}
+                // mediumSize={true}
+              />
+              <div className="player-name">{displayName}</div>
+            </div>
+          )
+        });
       });
     }
     

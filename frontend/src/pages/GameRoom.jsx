@@ -19,6 +19,7 @@ const GameRoom = () => {
   const [isPrepared, setIsPrepared] = useState(false);
   const [isGameStarted, setIsGameStarted] = useState(false);
   const [playerCount, setPlayerCount] = useState(0);
+  const [readyPlayerCount, setReadyPlayerCount] = useState(0);
   const [isMusicPlaying, setIsMusicPlaying] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const backgroundMusicRef = useRef(null);
@@ -133,6 +134,9 @@ const GameRoom = () => {
           if (data.type === "room_info" && data.players) {
             console.log("收到房間信息，玩家列表:", data.players);
             setPlayerCount(data.players.length);
+            // 計算已準備的玩家數量
+            const readyCount = data.players.filter(player => player.is_ready).length;
+            setReadyPlayerCount(readyCount);
           }
           if (data.type === "connection_established") {
             console.log("連接建立消息:", data);
@@ -266,6 +270,16 @@ const GameRoom = () => {
   };
 
   const handleStartGame = () => {
+    if (playerCount < 2) {
+      alert("至少需要2位玩家才能開始遊戲！");
+      return;
+    }
+    
+    if (readyPlayerCount < 2) {
+      alert("至少需要2位玩家準備好才能開始遊戲！");
+      return;
+    }
+    
     if (socket && socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: "start_game" }));
     }
@@ -310,12 +324,15 @@ const GameRoom = () => {
         setIsAdmin(data.is_admin);
       }
       
-      // 處理玩家準備狀態更新，也可能包含房主信息
+      // 處理玩家準備狀態更新
       if (data.type === "player_ready_state") {
+        // 當收到準備狀態更新時，請求最新的房間信息
+        socket.send(JSON.stringify({
+          type: "get_room_info"
+        }));
+        
         // 如果消息中包含用戶ID和管理員信息，且與當前用戶相關，則更新管理員狀態
         if (data.user_id !== undefined && data.is_admin !== undefined) {
-          // 後端應該會返回當前用戶的 ID，可以在 connection_established 時記錄
-          // 如果沒有特定的方式確認當前用戶，可能需要額外邏輯來匹配
           if (data.username === currentUser) {
             setIsAdmin(data.is_admin);
           }
@@ -410,8 +427,17 @@ const GameRoom = () => {
                     <button 
                       onClick={handleStartGame}
                       className="start-game-btn"
+                      disabled={playerCount < 2 || readyPlayerCount < 2}
+                      style={{ 
+                        opacity: (playerCount < 2 || readyPlayerCount < 2) ? 0.5 : 1,
+                        cursor: (playerCount < 2 || readyPlayerCount < 2) ? 'not-allowed' : 'pointer'
+                      }}
                     >
-                      遊戲開始
+                      {playerCount < 2 ? 
+                        `等待更多玩家加入 (${playerCount}/2)` : 
+                        readyPlayerCount < 2 ? 
+                          `等待玩家準備 (${readyPlayerCount}/2)` : 
+                          "遊戲開始"}
                     </button>
                   )
                 ) : null}
@@ -422,28 +448,7 @@ const GameRoom = () => {
                 isGameStarted={isGameStarted}
               />}
             </>
-          )}
-          
-          {/* <div className="game-controls">
-            {!isPrepared ? (
-              <button 
-                onClick={handlePrepare}
-                className="prepare-btn"
-              >
-                準備
-              </button>
-            ) : !isGameStarted ? (
-              isAdmin && (
-                <button 
-                  onClick={handleStartGame}
-                  className="start-game-btn"
-                >
-                  遊戲開始
-                </button>
-              )
-            ) : null}
-          </div> */}
-          
+          )}          
           <ChatBox socket={socket} />
         </>
       ) : (
