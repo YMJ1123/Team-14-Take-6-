@@ -48,7 +48,7 @@ cd frontend
 
 npm run dev
 
-打開 http://localhost:5173/ 看畫面
+打開 http://127.0.0.1:5173/ 看畫面
 
 開新的terminal:
 
@@ -91,6 +91,12 @@ daphne -p 8000 take6.asgi:application
     - Run python backend/manage.py migrate
 
 ## 進度
+- 0521 hyc add load account UI &  login forever + normal logout
+    - 登入後可以用cookie正常維持登入狀態
+    - 可以正常登出
+    - 因為用chrome登入時若重整會有點當，所以新增"讀取帳戶中"的畫面
+    - 前端要用127.0.0.1:5173開
+
 - 0521 hyc
     - 可以登入後正常玩遊戲了
     - 只能登入才能玩遊戲
