@@ -308,6 +308,8 @@ class GameConsumer(AsyncWebsocketConsumer):
                     player_name = results.get('player_name')
                     row_bull_heads = results.get('row_bull_heads')
                     
+                    print("嗨嗨 player_id: ", player_id)
+                    print("嗨嗨 player_name: ", player_name)
                     # 向需要選擇的玩家發送選擇列的消息
                     await self.channel_layer.group_send(
                         self.room_group_name,
@@ -733,13 +735,21 @@ class GameConsumer(AsyncWebsocketConsumer):
         }))
     
     async def choose_row(self, event):
+        print("嗨嗨 choose_row event: ", event)
+        print("嗨嗨 self.user.id: ", self.user.id)
+        print(type(event.get('sender_id')))
+        print(type(self.user.id))
+        sender_id = int(event.get('sender_id'))
         # 如果自己是發送者，才要通知前端顯示
-        if event.get('sender_id') == self.user.id:
+        if sender_id == self.user.id:
+            print("對我進來了")
+            print("event.get('sender_id'): ", event.get('sender_id'))
+            print("self.user.id: ", self.user.id)
             message = {
                 'type': 'i_choose_row',
                 'player_username': self.user.username,
                 'bull_heads': event.get('row_bull_heads'),  
-                'player_id': event.get('sender_id'),  # 添加發送者ID作為玩家ID
+                'player_id': sender_id #event.get('sender_id'),  # 添加發送者ID作為玩家ID
             }
             await self.send(text_data=json.dumps(message))
             return
@@ -959,12 +969,14 @@ class GameConsumer(AsyncWebsocketConsumer):
     async def wait_choose_card(self, event):
         """通知其他玩家等待某個玩家選擇列"""
         # 如果自己是需要選擇的玩家，不發送等待消息
-        if event.get('player_id') == self.user.id:
+        player_id = int(event.get('player_id'))
+        if player_id == self.user.id:
+            print("嗨嗨 我是需要選擇的玩家")
             return
             
         await self.send(text_data=json.dumps({
             'type': 'wait_choose_card',
-            'player_id': event.get('player_id'),
+            'player_id': player_id,
             'player_name': event.get('player_name')
         }))
 
