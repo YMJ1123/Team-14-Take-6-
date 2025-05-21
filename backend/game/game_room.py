@@ -265,6 +265,7 @@ class GameRoom:
                 'player_index': player_index,
                 'card_value': card_value
             }
+            print("pending_choices: ", self.pending_choices)
             
             # 計算每行的牛頭數
             row_bull_heads = []
@@ -315,6 +316,11 @@ class GameRoom:
     
     def handle_choose_row(self, player_id, row_idx):
         """處理玩家選擇的列"""
+        print("pending_choices: ", self.pending_choices)
+        print(type(player_id))
+        # print(type(self.pending_choices[5]))
+        player_id = str(player_id)
+        print(type(player_id))
         if player_id not in self.pending_choices:
             print(f"錯誤：玩家 {player_id} 沒有待處理的選擇")
             return None

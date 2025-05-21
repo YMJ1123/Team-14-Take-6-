@@ -298,7 +298,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             elif message_type == 'choose_row_response':
                 row_index = data.get('row_index')
                 player_id = self.user.id  # 使用當前用戶ID
-                
+                print("choose_row_response: row index", row_index, "player id ", player_id)
                 # 調用 GameRoom 的 handle_choose_row 方法處理選擇
                 results = self.game_room.handle_choose_row(player_id, row_index)
                 
@@ -386,10 +386,16 @@ class GameConsumer(AsyncWebsocketConsumer):
                             
                             # 獲取玩家數量
                             player_count = self.game_room.get_player_count()
+                            print("player_count: ", player_count)
+
+                            # 找出玩家id順序
+                            room_players_db = await self.get_room_players_sorted() 
+                            ordered_player_ids = [player['id'] for player in room_players_db]
+                            print(f"遊戲重新發牌，有序玩家ID列表: {ordered_player_ids}")
                             
                             # 重新初始化遊戲狀態（重置牌桌和手牌，但保留玩家分數）
                             self.game_room.game_state = None  # 先清空現有遊戲狀態
-                            self.game_room.initialize_game_state(player_count)  # 重新創建遊戲狀態
+                            self.game_room.initialize_game_state(player_count, ordered_player_ids)  # 重新創建遊戲狀態
                             
                             # 更新牌桌
                             new_board = []
@@ -397,6 +403,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                                 row_cards = [{'value': card.value, 'bull_heads': card.bull_heads} for card in row]
                                 new_board.append(row_cards)
                             
+                            print("遊戲已重置，通知所有玩家1")
+                            print("new_board: ", new_board)
+                            print("player_count: ", player_count)
                             # 通知所有玩家遊戲已重置
                             await self.channel_layer.group_send(
                                 self.room_group_name,
@@ -657,10 +666,15 @@ class GameConsumer(AsyncWebsocketConsumer):
                         
                         # 獲取玩家數量
                         player_count = self.game_room.get_player_count()
+
+                        # 找出玩家id順序
+                        room_players_db = await self.get_room_players_sorted() 
+                        ordered_player_ids = [player['id'] for player in room_players_db]
+                        print(f"遊戲重新發牌，有序玩家ID列表: {ordered_player_ids}")
                         
                         # 重新初始化遊戲狀態（重置牌桌和手牌，但保留玩家分數）
                         self.game_room.game_state = None  # 先清空現有遊戲狀態
-                        self.game_room.initialize_game_state(player_count)  # 重新創建遊戲狀態
+                        self.game_room.initialize_game_state(player_count, ordered_player_ids)  # 重新創建遊戲狀態
                         
                         # 更新牌桌
                         new_board = []
@@ -669,6 +683,9 @@ class GameConsumer(AsyncWebsocketConsumer):
                             new_board.append(row_cards)
                         
                         # 通知所有玩家遊戲已重置
+                        print("遊戲已重置，通知所有玩家2")
+                        print("new_board: ", new_board)
+                        print("player_count: ", player_count)
                         await self.channel_layer.group_send(
                             self.room_group_name,
                             {
@@ -1092,6 +1109,7 @@ class GameConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'board': event['board']
         }))
+        print("遊戲已重置，通知前端")
         # 重置已處理玩家記錄
         self.processed_players = set()
         
