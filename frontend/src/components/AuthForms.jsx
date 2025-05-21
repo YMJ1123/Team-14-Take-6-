@@ -6,7 +6,15 @@ const AuthForms = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, register, isAuthenticated, user, logout } = useAuth();
+  const { login, register, isAuthenticated, user, logout, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="auth-container">
+        <div className="auth-status">讀取帳戶中...</div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
