@@ -1,14 +1,16 @@
 body {
     font-family: 'Microsoft JhengHei', Arial, sans-serif;
     line-height: 1.6;
-    color: #333;
+    color: #f0d078;
     max-width: 900px;
     margin: 0 auto;
     padding: 20px;
-    background-color: #f5f5f5;
+    background-color: #072e10;
+    background-image: linear-gradient(135deg, #072e10 0%, #0a5215 50%, #072e10 100%);
 }
 h1, h2 {
-    color: #2c3e50;
+    color: #ffcc00;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
 }
 .container {
     display: flex;
@@ -32,20 +34,25 @@ h1, h2 {
 
 .user-status {
     font-size: 14px;
-    padding: 5px 10px;
-    border-radius: 4px;
-    background-color: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 8px 15px;
+    border-radius: 6px;
+    background-color: rgba(5, 30, 12, 0.95);
+    background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(0, 0, 0, 0.5);
+    border: 2px solid #d4af37;
+    animation: border-pulse 4s infinite alternate;
 }
 
 .logged-in-status {
-    color: #2ecc71;
+    color: #7dff9a;
     font-weight: bold;
+    text-shadow: 0 0 8px rgba(125, 255, 154, 0.5);
 }
 
 .guest-status {
-    color: #e67e22;
+    color: #ffd700;
     font-style: italic;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
 }
 
 .room-actions {
@@ -58,25 +65,35 @@ h1, h2 {
     border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
-    border: none;
+    border: 1px solid #d4af37;
+    transition: all 0.3s;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
 }
 
 .back-btn {
-    background-color: #3498db;
-    color: white;
+    background: linear-gradient(135deg, #1a5f2a 0%, #2a7f3a 50%, #1a5f2a 100%);
+    color: #f5e6a9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border-color: #4a9f5a;
 }
 
 .delete-room-btn {
-    background-color: #e74c3c;
-    color: white;
+    background: linear-gradient(135deg, #8c1c10 0%, #b92e1e 50%, #8c1c10 100%);
+    color: #f5e6a9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border-color: #c94f3f;
 }
 
 .back-btn:hover {
-    background-color: #2980b9;
+    background: linear-gradient(135deg, #2a7f3a 0%, #3a9f4a 50%, #2a7f3a 100%);
+    box-shadow: 0 0 15px rgba(74, 159, 90, 0.8);
+    transform: translateY(-2px);
 }
 
 .delete-room-btn:hover {
-    background-color: #c0392b;
+    background: linear-gradient(135deg, #b92e1e 0%, #e74c3c 50%, #b92e1e 100%);
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+    transform: translateY(-2px);
 }
 
 .game-controls {
@@ -87,29 +104,63 @@ h1, h2 {
 
 .prepare-btn, .start-game-btn {
     padding: 12px 30px;
-    color: white;
-    border: none;
     border-radius: 4px;
     font-size: 1.1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s;
+    border: 2px solid #d4af37;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .prepare-btn {
-    background-color: #3498db;
+    background: linear-gradient(135deg, #1e6090 0%, #3498db 50%, #1e6090 100%);
+    color: #f5e6a9;
+    animation: pulse-blue 2s infinite;
 }
 
 .start-game-btn {
-    background-color: #2ecc71;
+    background: linear-gradient(135deg, #d4af37 0%, #f5da48 50%, #d4af37 100%);
+    color: #0a4f15;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+    animation: pulse-gold 2s infinite;
 }
 
 .prepare-btn:hover {
-    background-color: #2980b9;
+    background: linear-gradient(135deg, #2980b9 0%, #4ca9e1 50%, #2980b9 100%);
+    box-shadow: 0 0 20px rgba(52, 152, 219, 0.8);
+    transform: translateY(-2px) scale(1.05);
 }
 
 .start-game-btn:hover {
-    background-color: #27ae60;
+    background: linear-gradient(135deg, #ffd700 0%, #ffec6f 50%, #ffd700 100%);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px) scale(1.05);
+}
+
+@keyframes pulse-blue {
+    0% {
+        box-shadow: 0 0 10px rgba(52, 152, 219, 0.6);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(52, 152, 219, 0.8);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(52, 152, 219, 0.6);
+    }
+}
+
+@keyframes pulse-gold {
+    0% {
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.8);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.5);
+    }
 }
 
 .connection-status {
@@ -143,16 +194,20 @@ h1, h2 {
 .my-hand-container {
     margin-top: 20px;
     padding: 15px;
-    background-color: #f8f9fa;
+    background-color: rgba(5, 30, 12, 0.95);
+    background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%);
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border: 2px solid #d4af37;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
+    animation: border-pulse 4s infinite alternate;
 }
 
 .my-hand-container h2 {
     margin-top: 0;
     margin-bottom: 15px;
-    color: #2c3e50;
+    color: #ffd700;
     text-align: center;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
 }
 
 .empty-hand {
@@ -160,10 +215,15 @@ h1, h2 {
     justify-content: center;
     align-items: center;
     min-height: 120px;
-    border: 2px dashed #ccc;
+    border: 2px dashed #d4af37;
     border-radius: 8px;
-    color: #777;
+    color: #ffd700;
     font-style: italic;
+    background-color: rgba(5, 30, 12, 0.95);
+    background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.95) 50%, rgba(5, 25, 10, 0.9) 100%);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3), inset 0 0 30px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+    animation: border-pulse 4s infinite alternate;
 }
 
 #gameBoard {
@@ -175,21 +235,29 @@ h1, h2 {
 .board-row {
     display: flex;
     align-items: center;
-    border: 1px solid #ccc;
-    padding: 10px;
-    background-color: #fff;
+    border: 2px solid #d4af37;
+    padding: 15px;
+    background-color: rgba(5, 30, 12, 0.95);
+    background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
+    border-radius: 6px;
 }
 .card {
-    border: 1px solid #2c3e50;
+    border: 2px solid #d4af37;
     border-radius: 8px;
-    padding: 10px;
+    padding: 12px;
     margin: 5px;
     text-align: center;
-    background-color: white;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background-color: rgba(8, 42, 15, 0.95);
+    background-image: linear-gradient(135deg, rgba(10, 45, 18, 0.9) 0%, rgba(15, 60, 25, 0.9) 50%, rgba(10, 45, 18, 0.9) 100%);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.5);
+    color: #f5e6a9;
 }
 .card.played {
-    background-color: #f9f9f9;
+    background-color: rgba(5, 50, 18, 0.95);
+    border-color: #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.4);
 }
 #playerHand {
     display: flex;
@@ -207,40 +275,32 @@ h1, h2 {
     margin-top: 20px;
 }
 #chatMessages {
-    border: 1px solid #ccc;
+    border: 2px solid #d4af37;
     height: 200px;
     overflow-y: scroll;
-    padding: 10px;
-    background-color: white;
+    padding: 15px;
+    background-color: rgba(5, 30, 12, 0.95);
+    background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
     margin-bottom: 10px;
+    border-radius: 6px;
+    color: #f5e6a9;
 }
 #playerList {
-    border: 1px solid #ccc;
-    padding: 10px;
-    background-color: white;
+    border: 2px solid #d4af37;
+    padding: 15px;
+    background-color: rgba(5, 30, 12, 0.95);
+    background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
     margin-bottom: 20px;
+    border-radius: 6px;
+    color: #f5e6a9;
 }
 .controls {
     margin-top: 20px;
 }
-button {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-button:hover {
-    background-color: #2980b9;
-}
-input[type="text"] {
-    padding: 10px;
-    margin-right: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 300px;
-}
+/* Button styling moved to casino-theme.css */
+/* Input styling moved to casino-theme.css */
 
 .music-btn {
     padding: 8px 16px;

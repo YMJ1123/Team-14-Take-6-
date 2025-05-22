@@ -125,7 +125,7 @@ const AuthForms = () => {
           </button>
         </p>
         <div className="guest-notice">
-          <span>未登入時將以訪客模式進入遊戲</span>
+          <span>請先登入後再進入遊戲</span>
         </div>
       </div>
     </div>

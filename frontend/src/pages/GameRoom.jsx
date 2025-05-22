@@ -12,6 +12,14 @@ const GameRoom = () => {
   const { roomName } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
+  
+  // Add authentication check and redirect
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/?requireLogin=true');
+    }
+  }, [isAuthenticated, navigate]);
+  
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
@@ -68,6 +76,8 @@ const GameRoom = () => {
       } else {
         console.error('找不到有效的用戶名，無法建立連接', { userData, isAuthenticated, user });
         setConnectionError('請先登入後再進入遊戲房間');
+        // Redirect to home page if not authenticated
+        navigate('/?requireLogin=true');
         return null;
       }
       

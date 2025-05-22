@@ -1,0 +1,29 @@
+/* Cards double-click hint styling */
+.player-hand .hand-card:after {
+  content: "雙擊出牌";
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffd700;
+  font-size: 0.7rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+.player-hand .hand-card:hover:after {
+  opacity: 1;
+}
+
+/* Flash animation for cards that can be played */
+@keyframes playable-flash {
+  0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
+  50% { box-shadow: 0 0 15px rgba(255, 215, 0, 1); }
+  100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
+}
+
+.player-hand .card:not(.played) {
+  animation: playable-flash 2s infinite;
+}

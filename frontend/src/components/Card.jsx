@@ -1,9 +1,14 @@
 import React from "react";
 import "../styles/card.css";
 
-const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, mediumSize = false, isBack = false }) => {
+const Card = ({ value, bullHeads, isPlayed = false, onClick, onDoubleClick, smallSize = false, mediumSize = false, isBack = false }) => {
   // 判斷是否顯示牌背（不再使用 value === "back"）
   const isCardBack = isBack;
+  
+  // Handle click events, with separate handling for double and single clicks
+  const handleClick = (e) => {
+    if (onClick) onClick(e);
+  };
   
   // 根據牛頭數量確定卡牌顏色 - 確保相同牛頭數有相同顏色
   const getCardColor = () => {
@@ -22,7 +27,11 @@ const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, 
   // 如果是卡牌背面
   if (isCardBack) {
     return (
-      <div className={`card card-back ${smallSize ? 'card-small' : ''} ${mediumSize ? 'card-medium' : ''}`} onClick={onClick}>
+      <div 
+        className={`card card-back ${smallSize ? 'card-small' : ''} ${mediumSize ? 'card-medium' : ''}`} 
+        onClick={handleClick}
+        onDoubleClick={onDoubleClick}
+      >
         <div className="card-inner">
           <div className="card-design"></div>
         </div>
@@ -33,7 +42,8 @@ const Card = ({ value, bullHeads, isPlayed = false, onClick, smallSize = false, 
   return (
     <div 
       className={`card ${getCardColor()} ${isPlayed ? 'played' : ''} ${smallSize ? 'card-small' : ''} ${mediumSize ? 'card-medium' : ''}`}
-      onClick={onClick}
+      onClick={handleClick}
+      onDoubleClick={onDoubleClick}
       style={{ 
         backgroundImage: "url('/images/bull-head-bg.png')",
         backgroundSize: "85%",

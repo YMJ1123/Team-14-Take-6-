@@ -923,17 +923,30 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         {/* 整合進牌桌的我的手牌 - 移除框框 */}
         <div className="my-hand-row">
           <div className="row-header">我的手牌</div>
-          <div className="my-hand-container">
+          <div className="my-hand-container" style={{
+            backgroundColor: 'rgba(5, 30, 12, 0.95)',
+            backgroundImage: 'linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%)',
+            border: '2px solid #d4af37',
+            borderRadius: '8px',
+            boxShadow: '0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5)'
+          }}>
             {isGameStarted && !isGameOver ? (
               hand.length > 0 ? (
-                <div className="player-hand">
+                <div className="player-hand" style={{
+                  backgroundColor: 'rgba(5, 30, 12, 0.95)',
+                  backgroundImage: 'linear-gradient(135deg, rgba(8, 40, 15, 0.9) 0%, rgba(10, 50, 20, 0.9) 50%, rgba(8, 40, 15, 0.9) 100%)',
+                  padding: '20px',
+                  border: '2px solid rgba(212, 175, 55, 0.4)',
+                  borderRadius: '8px',
+                  boxShadow: 'inset 0 0 20px rgba(0, 0, 0, 0.5)'
+                }}>
                   {hand.map((card, index) => (
                     <div 
                       key={`hand-${index}`} 
                       className={`hand-card ${selectedCard === index ? 'selected' : ''}`}
                       style={{ 
                         transform: `rotate(${Math.random() * 2 - 1}deg)`,
-                        marginLeft: index > 0 ? '-15px' : '0'
+                        marginLeft: index > 0 ? '-25px' : '0' /* Increased overlap from -15px to -25px */
                       }}
                     >
                       <Card
@@ -941,6 +954,11 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                         bullHeads={card.bull_heads}
                         isPlayed={false}
                         onClick={() => playCard(index)}
+                        onDoubleClick={() => {
+                          // On double-click, automatically select and confirm the card
+                          setSelectedCard(index);
+                          setTimeout(() => confirmPlayCard(), 10);
+                        }}
                       />
                     </div>
                   ))}
@@ -951,13 +969,17 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                 </span>
               )
             ) : isGameOver ? (
-              <span className="empty-hand-message">
-                遊戲已結束
-              </span>
+              <div className="empty-hand-container">
+                <span className="empty-hand-message">
+                  遊戲已結束
+                </span>
+              </div>
             ) : (
-              <span className="empty-hand-message">
-                遊戲開始後將顯示您的牌
-              </span>
+              <div className="empty-hand-container">
+                <span className="empty-hand-message">
+                  遊戲開始後將顯示您的牌
+                </span>
+              </div>
             )}
           </div>
           <div>

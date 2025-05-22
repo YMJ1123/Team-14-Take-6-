@@ -1,0 +1,55 @@
+/* Casino theme fixes for all white backgrounds */
+
+/* Override for any white background in player hand area */
+.player-hand,
+.my-hand-container,
+.my-hand-row,
+.empty-hand-container,
+.player-hand-container {
+  background-color: rgba(5, 30, 12, 0.95) !important;
+  background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%) !important;
+  border-color: #d4af37 !important;
+  color: #f5e6a9 !important;
+}
+
+/* Add border styling to specific containers */
+.my-hand-container,
+.player-hand-container {
+  border: 2px solid #d4af37 !important; 
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Ensure text colors match theme */
+.my-hand-container *,
+.player-hand-container * {
+  color: #f5e6a9 !important;
+}
+
+/* Fix for card container backgrounds */
+.player-hand > div,
+.my-hand-container > div {
+  background-color: transparent !important;
+}
+
+/* Extra specific rule for the issue in the screenshot */
+.my-hand-row .my-hand-container {
+  background-color: rgba(5, 30, 12, 0.95) !important;
+  background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%) !important;
+}
+
+/* Ensuring the container shown in the screenshot has proper styling */
+.player-hand {
+  padding: 20px !important;
+  border-radius: 8px !important;
+  border: 2px solid rgba(212, 175, 55, 0.4) !important;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5) !important;
+  background-color: rgba(5, 30, 12, 0.95) !important;
+  background-image: linear-gradient(135deg, rgba(8, 40, 15, 0.9) 0%, rgba(10, 50, 20, 0.9) 50%, rgba(8, 40, 15, 0.9) 100%) !important;
+}
+
+/* Apply dark style to all possible elements in the hand area */
+div[class*="hand"],
+div[class*="card"] {
+  background-color: transparent;
+}

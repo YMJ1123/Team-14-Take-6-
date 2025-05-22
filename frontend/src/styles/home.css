@@ -1,22 +1,26 @@
 body {
     font-family: 'Microsoft JhengHei', Arial, sans-serif;
     line-height: 1.6;
-    color: #333;
+    color: #f0d078;
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
-    background-color: #f5f5f5;
+    background-color: #0a5215;
+    background-image: linear-gradient(135deg, #0a5215 0%, #0d6a1c 50%, #0a5215 100%);
 }
 h1 {
-    color: #2c3e50;
+    color: #ffcc00;
     margin-bottom: 30px;
     text-align: center;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
 }
 .container {
-    background-color: white;
+    background-color: rgba(8, 42, 15, 0.95);
     padding: 25px;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border: 2px solid #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.4);
+    background-image: linear-gradient(135deg, rgba(5, 35, 12, 0.9) 0%, rgba(12, 55, 20, 0.9) 50%, rgba(5, 35, 12, 0.9) 100%);
 }
 .game-rules {
     margin-top: 30px;
@@ -30,24 +34,28 @@ ul {
     border-top: 1px solid #eee;
 }
 code {
-    background-color: #f8f8f8;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #f5e6a9;
     padding: 2px 5px;
     border-radius: 3px;
     font-family: monospace;
+    border: 1px solid rgba(212, 175, 55, 0.3);
 }
 .room-list {
     margin-top: 30px;
     padding: 20px;
-    background-color: #f8f8f8;
+    background-color: rgba(5, 30, 12, 0.95);
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border: 2px solid #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.5);
 }
 
 .room-list h2 {
-    color: #2c3e50;
+    color: #ffd700;
     margin-bottom: 15px;
     text-align: center;
     font-size: 1.5rem;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
 }
 
 .rooms {
@@ -59,27 +67,31 @@ code {
 .rooms li {
     padding: 12px 15px;
     margin-bottom: 10px;
-    background-color: white;
+    background-color: rgba(16, 50, 25, 0.9);
     border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border: 1px solid #d4af37;
+    box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.3);
     transition: transform 0.2s, box-shadow 0.2s;
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
+    background-image: linear-gradient(135deg, rgba(12, 45, 20, 0.9) 0%, rgba(20, 65, 30, 0.9) 50%, rgba(12, 45, 20, 0.9) 100%);
 }
 
 .rooms li:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+    border: 1px solid #ffd700;
 }
 
 .room-link {
-    color: #3498db;
+    color: #f5e6a9;
     text-decoration: none;
     font-weight: bold;
     font-size: 1.2rem;
     flex: 1;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
 }
 
 .room-details {
@@ -90,35 +102,41 @@ code {
 }
 
 .room-players {
-    color: #e74c3c;
+    color: #ff9191;
     font-weight: bold;
     font-size: 0.95rem;
+    text-shadow: 0 0 5px rgba(255, 145, 145, 0.5);
 }
 
 .room-info {
-    color: #888;
+    color: #c8a969;
     font-size: 0.85rem;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
 }
 
 .room-link:hover {
     text-decoration: underline;
-    color: #2980b9;
+    color: #ffd700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
 }
 
 /* 創建房間表單樣式 */
 .create-room-container {
     margin-top: 30px;
-    background-color: #fff;
+    background-color: rgba(5, 30, 12, 0.95);
     border-radius: 8px;
     padding: 20px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border: 2px solid #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.5), inset 0 0 30px rgba(0, 0, 0, 0.5);
+    background-image: linear-gradient(135deg, rgba(8, 38, 15, 0.9) 0%, rgba(10, 45, 18, 0.9) 50%, rgba(8, 38, 15, 0.9) 100%);
 }
 
 .create-room-container h2 {
     text-align: center;
-    color: #2c3e50;
+    color: #ffd700;
     margin-bottom: 20px;
     font-size: 1.5rem;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
 }
 
 .create-room-form {
@@ -135,31 +153,38 @@ code {
 .room-name-input {
     flex: 1;
     padding: 12px 15px;
-    border: 1px solid #ddd;
+    border: 1px solid #d4af37;
     border-radius: 4px 0 0 4px;
     font-size: 1rem;
     outline: none;
-    transition: border-color 0.3s;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: #f5e6a9;
+    transition: all 0.3s;
 }
 
 .room-name-input:focus {
-    border-color: #3498db;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    border-color: #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.4);
 }
 
 .create-btn {
     padding: 12px 20px;
-    background-color: #3498db;
-    color: white;
-    border: none;
+    background: linear-gradient(135deg, #d4af37 0%, #f5da48 50%, #d4af37 100%);
+    color: #0a4f15;
+    border: 1px solid #ffd700;
     border-radius: 0 4px 4px 0;
     cursor: pointer;
     font-weight: bold;
-    transition: background-color 0.3s;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+    transition: all 0.3s;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 .create-btn:hover {
-    background-color: #2980b9;
+    background: linear-gradient(135deg, #ffd700 0%, #ffec6f 50%, #ffd700 100%);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px);
 }
 
 /* 遊戲房間樣式 */
@@ -187,25 +212,35 @@ code {
     border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
-    border: none;
+    border: 1px solid #d4af37;
+    transition: all 0.3s;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
 }
 
 .back-btn {
-    background-color: #3498db;
-    color: white;
+    background: linear-gradient(135deg, #1a5f2a 0%, #2a7f3a 50%, #1a5f2a 100%);
+    color: #f5e6a9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border-color: #4a9f5a;
 }
 
 .delete-room-btn {
-    background-color: #e74c3c;
-    color: white;
+    background: linear-gradient(135deg, #8c1c10 0%, #b92e1e 50%, #8c1c10 100%);
+    color: #f5e6a9;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    border-color: #c94f3f;
 }
 
 .back-btn:hover {
-    background-color: #2980b9;
+    background: linear-gradient(135deg, #2a7f3a 0%, #3a9f4a 50%, #2a7f3a 100%);
+    box-shadow: 0 0 15px rgba(74, 159, 90, 0.8);
+    transform: translateY(-2px);
 }
 
 .delete-room-btn:hover {
-    background-color: #c0392b;
+    background: linear-gradient(135deg, #b92e1e 0%, #e74c3c 50%, #b92e1e 100%);
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+    transform: translateY(-2px);
 }
 
 .game-controls {
@@ -216,18 +251,35 @@ code {
 
 .start-game-btn {
     padding: 12px 30px;
-    background-color: #2ecc71;
-    color: white;
-    border: none;
+    background: linear-gradient(135deg, #d4af37 0%, #f5da48 50%, #d4af37 100%);
+    color: #0a4f15;
+    border: 2px solid #ffd700;
     border-radius: 4px;
     font-size: 1.1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s;
+    text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.5);
+    animation: pulse-gold 2s infinite;
 }
 
 .start-game-btn:hover {
-    background-color: #27ae60;
+    background: linear-gradient(135deg, #ffd700 0%, #ffec6f 50%, #ffd700 100%);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.8);
+    transform: translateY(-2px) scale(1.05);
+}
+
+@keyframes pulse-gold {
+    0% {
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.8);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.6), inset 0 0 5px rgba(255, 255, 255, 0.5);
+    }
 }
 
 .connection-status {
@@ -256,4 +308,78 @@ code {
 
 .retry-btn:hover {
     background-color: #2980b9;
+}
+
+/* 刷新按鈕和上次更新時間樣式 */
+.room-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.refresh-btn {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #1a5f2a 0%, #2a7f3a 50%, #1a5f2a 100%);
+  color: #f5e6a9;
+  border: 1px solid #d4af37;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.refresh-btn:hover {
+  background: linear-gradient(135deg, #2a7f3a 0%, #3a9f4a 50%, #2a7f3a 100%);
+  box-shadow: 0 0 15px rgba(74, 159, 90, 0.8);
+  transform: translateY(-2px);
+}
+
+.refresh-btn:disabled {
+  background: linear-gradient(135deg, #5a5a5a 0%, #7a7a7a 50%, #5a5a5a 100%);
+  border-color: #888;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.last-updated {
+  font-size: 0.8rem;
+  color: #c8a969;
+  margin-top: 10px;
+  text-align: right;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Login alert styling */
+.login-alert {
+  background-color: rgba(231, 76, 60, 0.3);
+  color: #ffd700;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  border: 1px solid #e74c3c;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: bold;
+  animation: alert-pulse 2s infinite alternate;
+  box-shadow: 0 0 15px rgba(231, 76, 60, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes alert-pulse {
+  0% {
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.4);
+    border-color: #e74c3c;
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(231, 76, 60, 0.7), inset 0 0 25px rgba(0, 0, 0, 0.6);
+    border-color: #ff6b6b;
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.4);
+    border-color: #e74c3c;
+  }
 }

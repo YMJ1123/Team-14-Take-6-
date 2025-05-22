@@ -1,0 +1,102 @@
+/* Dark accents for casino theme */
+
+/* Dark overlay for container backgrounds */
+.dark-overlay {
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* Decorative corner elements for containers */
+.corner-decoration {
+  position: relative;
+}
+
+.corner-decoration::before,
+.corner-decoration::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #d4af37;
+}
+
+.corner-decoration::before {
+  top: -5px;
+  left: -5px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.corner-decoration::after {
+  bottom: -5px;
+  right: -5px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Dark card background variant */
+.card-dark {
+  background-color: #091d0c !important;
+}
+
+/* Add dark pattern overlay to specific elements */
+.pattern-dark {
+  position: relative;
+}
+
+.pattern-dark::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(45deg, rgba(0, 0, 0, 0.2) 25%, transparent 25%), 
+    linear-gradient(-45deg, rgba(0, 0, 0, 0.2) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(0, 0, 0, 0.2) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(0, 0, 0, 0.2) 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  z-index: -1;
+  opacity: 0.8;
+  border-radius: inherit;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Dark inset shadow for depth */
+.depth-shadow {
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.7);
+}
+
+/* Velvet texture background for premium areas */
+.velvet-bg {
+  background-color: #0c2d14;
+  background-image: 
+    radial-gradient(ellipse at top left, rgba(12, 60, 22, 0.7) 0%, transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(5, 25, 10, 0.7) 0%, transparent 60%);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+/* Add dark striped pattern for alternate rows */
+.striped-dark-bg tr:nth-child(odd) {
+  background-color: rgba(5, 25, 10, 0.8);
+}
+
+.striped-dark-bg tr:nth-child(even) {
+  background-color: rgba(10, 40, 18, 0.8);
+}
+
+/* Modal backdrop dark style */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(3px);
+}
+
+/* Add subtle leather texture to containers */
+.leather-texture {
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='rgba(0,0,0,.1)' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+}

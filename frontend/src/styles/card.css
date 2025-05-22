@@ -2,18 +2,40 @@
   width: 70px;
   height: 100px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(255, 215, 0, 0.4);
+  border: 1px solid #d4af37;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s;
   overflow: hidden;
   cursor: pointer;
   background-position: center;
   background-repeat: no-repeat;
   background-size: 85%;
   background-image: url('/images/bull-head-bg.png');
+  background-color: rgba(5, 25, 10, 0.8);
+}
+
+/* Override the background colors when showing in player's hand */
+.player-hand .card:not(.card-color-1):not(.card-color-2):not(.card-color-3):not(.card-color-5):not(.card-color-7) {
+  background-color: rgba(5, 25, 10, 0.8) !important;
+}
+
+.player-hand-container {
+  background-color: rgba(5, 30, 12, 0.95);
+  background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%);
+}
+
+/* Add styling to background of the actual container that shows cards */
+#playerHand, .player-hand {
+  background-color: rgba(5, 30, 12, 0.95) !important;
+  background-image: linear-gradient(135deg, rgba(8, 40, 15, 0.9) 0%, rgba(10, 50, 20, 0.9) 50%, rgba(8, 40, 15, 0.9) 100%) !important;
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid rgba(212, 175, 55, 0.4);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .card-small {
@@ -37,11 +59,11 @@
 .card-number {
   font-size: 24px;
   font-weight: bold;
-  color: #000;
+  color: #000000; /* Changed from #0a4f15 to black */
   text-align: center;
   font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
   margin-top: 5px;
-  text-shadow: 0 0 5px rgba(255, 255, 255, 0.9);
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
 }
 
 .card-small .card-number {
@@ -97,8 +119,9 @@
 }
 
 .card:not(.played):hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+  border-color: #ffd700;
   z-index: 10;
 }
 
@@ -158,6 +181,12 @@
 
 .card-color-7 {
   background-color: rgba(155, 89, 182, 0.85) !important; /* Purple */
+}
+
+/* Default background for card containers to prevent white backgrounds */
+[class*="card-container"], .player-hand, .my-hand-container, .empty-hand-container {
+  background-color: rgba(5, 30, 12, 0.95) !important;
+  background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%) !important;
 }
 
 .card.played {

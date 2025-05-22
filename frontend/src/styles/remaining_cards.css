@@ -1,17 +1,19 @@
 .remaining-cards-container {
   margin: 20px 0;
   padding: 15px;
-  background-color: #f8f9fa;
+  background-color: rgba(12, 65, 22, 0.95);
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  border: 2px solid #d4af37;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
   text-align: center;
 }
 
 .remaining-cards-container h2 {
   margin-top: 0;
   margin-bottom: 15px;
-  color: #2c3e50;
+  color: #ffd700;
   font-size: 1.3rem;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
 }
 
 .all-cards-display {
@@ -20,9 +22,11 @@
   justify-content: center;
   margin: 15px auto;
   max-width: 900px;
-  background-color: rgba(44, 62, 80, 0.05);
+  background-color: rgba(8, 40, 15, 0.8);
   padding: 20px 10px;
   border-radius: 10px;
+  border: 1px solid #d4af37;
+  box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
   max-height: 400px;
   overflow-y: auto;
   position: relative;
@@ -34,13 +38,47 @@
 }
 
 .card-in-display:hover {
-  transform: translateY(-10px) rotate(0deg) !important;
+  transform: translateY(-10px) rotate(0deg) scale(1.05) !important;
   z-index: 1000 !important;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8) !important;
+  border-color: #ffd700 !important;
 }
 
 .card-distribution-info {
   margin-top: 15px;
   font-size: 0.9rem;
-  color: #666;
+  color: #c8a969;
   font-style: italic;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+/* Add fancy glowing counter for remaining cards */
+.remaining-counter {
+  display: inline-block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 5px 15px;
+  border-radius: 20px;
+  margin: 10px 0;
+  border: 2px solid #d4af37;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  animation: counter-glow 3s infinite alternate;
+}
+
+@keyframes counter-glow {
+  0% {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(255, 215, 0, 1);
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.8);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+  }
 }

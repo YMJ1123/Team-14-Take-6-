@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import Room, GameSession, Player
 from .serializers import RoomSerializer, GameSessionSerializer, PlayerSerializer
+from .game_room import GameRoom, active_rooms
 
 def home(request):
     return HttpResponse("Welcome to Take 6! Online Game API")
@@ -62,6 +63,28 @@ class RoomViewSet(viewsets.ModelViewSet):
         )
         
         return Response({'status': 'joined room'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], url_path='player_count')
+    def get_player_count(self, request, pk=None):
+        """獲取指定房間的當前玩家數量"""
+        room = self.get_object()
+        room_name = room.name
+        
+        # 檢查WebSocket活躍房間中是否有此房間
+        if room_name in active_rooms:
+            player_count = active_rooms[room_name].get_player_count()
+        else:
+            # 如果在活躍房間中找不到，嘗試從數據庫獲取
+            try:
+                game = GameSession.objects.filter(room=room, active=True).first()
+                if game:
+                    player_count = Player.objects.filter(game=game).count()
+                else:
+                    player_count = 0
+            except Exception:
+                player_count = 0
+        
+        return Response({'player_count': player_count})
 
 class GameSessionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = GameSession.objects.all()

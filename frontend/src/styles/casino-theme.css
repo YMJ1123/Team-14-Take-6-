@@ -1,0 +1,286 @@
+/* Global casino theme styles */
+body {
+  background-image: 
+    linear-gradient(135deg, rgba(6, 35, 10, 0.97) 0%, rgba(8, 60, 15, 0.95) 50%, rgba(6, 35, 10, 0.97) 100%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M54.627 0l.83.828-1.415 1.415L51.8 0h2.827zM5.373 0l-.83.828L5.96 2.243 8.2 0H5.374zM48.97 0l3.657 3.657-1.414 1.414L46.143 0h2.828zM11.03 0L7.372 3.657l1.415 1.414L13.857 0H11.03zm32.284 0L49.8 6.485 48.384 7.9l-7.9-7.9h2.83zm-24.596 0l-7.486 7.485 1.415 1.414 7.9-7.9h-1.83zm16.97 0l-7.486 7.485 1.414 1.414 7.9-7.9h-1.83zm-8.485 0l-7.485 7.485 1.414 1.414 7.9-7.9h-1.83zM20.97 0l-7.486 7.485 1.415 1.414 7.9-7.9h-1.83zm-8.486 0L5 7.485l1.414 1.414 7.9-7.9h-1.83zm24.596 0l-7.486 7.485 1.414 1.414 7.9-7.9h-1.83zM3.957 0l-2.15 2.15L4.373 4.7l1.414-1.415L3.957 0zM56.043 0l2.15 2.15L55.627 4.7l-1.415-1.415L56.043 0zM4.785 0h-.113L3 1.67 1.33 3H0l5.542 5.543 1.414-1.414-1.8-1.8L4.785 0zm51.33 0h.112L57 1.67 58.67 3h1.33L54.457 8.543l-1.414-1.414 1.8-1.8L56.114 0zM5.373 54.627l-.83-.828 1.415-1.415 1.414 1.414-2 .83zm48.254 0l.83-.828-1.414-1.415-1.415 1.414 2 .83zm-40.97 0l-3.657-3.657 1.414-1.414L15.485 54.6l-2.83.03zm32.284 0l3.657-3.657-1.414-1.414L42.115 54.6l2.83.03zm-8.486 0l7.486-7.485-1.414-1.414-7.9 7.9h1.83zm-16.97 0l7.487-7.485-1.415-1.414-7.9 7.9h1.83zm-8.485 0l7.486-7.485-1.414-1.414-7.9 7.9h1.83zm16.97 0l7.486-7.485-1.414-1.414-7.9 7.9h1.83zm-8.485 0l7.486-7.485-1.414-1.414-7.9 7.9h1.83zm24.597 0l7.485-7.485-1.414-1.414-7.9 7.9h1.83zM1.33 57l1.67-1.672.12.12L0 58.667l1.33-1.667zm56.01 0L56 55.327l.12.12 3.25 3.22L57.34 57zM54.458 54.457L49.542 59.4 49.4 59.257l4.915-4.915 1.414-1.4 1.414 1.414-2.686.1zm-48.287 0l-1.414-1.414 4.915-4.915L4.457 53l-2.686 1.457z' fill='%230d6a1c' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E"),
+    linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), 
+    linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000);
+  background-size: auto, auto, 60px 60px, 60px 60px;
+  background-position: center, center, 0 0, 30px 30px;
+  background-attachment: fixed;
+  color: #f5e6a9; /* Making sure all text has a default color */
+}
+
+/* Add fancy pulse animation to all gold-bordered elements */
+.container, .room-list, .create-room-container, .scoreboard,
+.game-board, .flip-area, .remaining-cards-container, .player-hand-container {
+  animation: border-pulse 4s infinite alternate;
+}
+
+@keyframes border-pulse {
+  0% {
+    border-color: #d4af37;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+  }
+  50% {
+    border-color: #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.7);
+  }
+  100% {
+    border-color: #d4af37;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+  }
+}
+
+/* Add subtle texture to all major containers */
+.container, .room-list, .create-room-container, .scoreboard,
+.game-board, .flip-area, .remaining-cards-container, .player-hand-container {
+  background-image: linear-gradient(rgba(0,0,0,0.2) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0,0,0,0.2) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: center center;
+}
+
+/* Enhance transition effects */
+.room-list, .create-room-container, .scoreboard,
+.game-board, .flip-area, .remaining-cards-container, .player-hand-container,
+button, .card, input {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Add glow to all headers */
+h1, h2, h3, h4, h5, h6 {
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+}
+
+/* Casino themed buttons with dark accents */
+.casino-btn {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 1) 0%, rgba(245, 218, 72, 1) 50%, rgba(212, 175, 55, 1) 100%);
+  color: #0a4f15;
+  border: 1px solid #d4af37;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.4);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.casino-btn::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.8;
+}
+
+.casino-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 1) 0%, rgba(255, 236, 111, 1) 50%, rgba(255, 215, 0, 1) 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.7);
+}
+
+.casino-btn:active {
+  transform: translateY(0);
+}
+
+.casino-btn.dark {
+  background: linear-gradient(135deg, rgba(8, 40, 15, 1) 0%, rgba(12, 60, 20, 1) 50%, rgba(8, 40, 15, 1) 100%);
+  color: #f5e6a9;
+  border-color: rgba(212, 175, 55, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.6), inset 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+.casino-btn.dark:hover {
+  background: linear-gradient(135deg, rgba(12, 60, 20, 1) 0%, rgba(16, 80, 28, 1) 50%, rgba(12, 60, 20, 1) 100%);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+@keyframes shine {
+  0% {
+    left: -150%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.5;
+  }
+  20% {
+    opacity: 0;
+  }
+  100% {
+    left: 150%;
+    opacity: 0;
+  }
+}
+
+/* Add dark accents to improve contrast */
+.container, .room-list, .create-room-container, .scoreboard,
+.game-board, .flip-area, .remaining-cards-container, .player-hand-container {
+  position: relative;
+}
+
+.container::before, .room-list::before, .create-room-container::before, 
+.scoreboard::before, .game-board::before, .flip-area::before, 
+.remaining-cards-container::before, .player-hand-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+  border-radius: inherit;
+}
+
+/* Style all table elements for consistency */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: rgba(5, 25, 10, 0.7);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+tr:nth-child(even) {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* Form elements styling for casino theme */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+textarea,
+select {
+  background-color: rgba(5, 20, 10, 0.9);
+  color: #f5e6a9;
+  border: 1px solid #d4af37;
+  border-radius: 4px;
+  padding: 8px 12px;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+textarea:focus,
+select:focus {
+  border-color: #ffd700;
+  outline: none;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 0 8px rgba(255, 215, 0, 0.6);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(245, 230, 169, 0.5);
+}
+
+/* Guest mode specific styling */
+.guest-mode-container {
+  background-color: rgba(5, 30, 12, 0.95);
+  border: 2px solid #d4af37;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px 0;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 25px rgba(0, 0, 0, 0.5);
+  background-image: linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%);
+}
+
+.guest-mode-container label {
+  color: #ffd700;
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.4);
+}
+
+.guest-mode-input {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Login status bar */
+.login-status-bar {
+  background-color: rgba(5, 30, 12, 0.95);
+  border-bottom: 2px solid #d4af37;
+  padding: 8px 15px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  position: relative;
+  z-index: 100;
+}
+
+.login-status-text {
+  color: #f5e6a9;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+}
+
+/* Button theming to ensure no default buttons remain */
+button {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 1) 0%, rgba(245, 218, 72, 1) 50%, rgba(212, 175, 55, 1) 100%);
+  color: #0a4f15;
+  border: 1px solid #d4af37;
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.3);
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+button:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 1) 0%, rgba(255, 236, 111, 1) 50%, rgba(255, 215, 0, 1) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4), inset 0 0 5px rgba(0, 0, 0, 0.3);
+}
+
+button.dark-btn {
+  background: linear-gradient(135deg, rgba(8, 40, 15, 1) 0%, rgba(12, 60, 20, 1) 50%, rgba(8, 40, 15, 1) 100%);
+  color: #f5e6a9;
+  border-color: rgba(212, 175, 55, 0.5);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+button.dark-btn:hover {
+  background: linear-gradient(135deg, rgba(12, 60, 20, 1) 0%, rgba(15, 75, 25, 1) 50%, rgba(12, 60, 20, 1) 100%);
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5), inset 0 0 10px rgba(0, 0, 0, 0.4);
+}
+
+/* Special animation for important buttons */
+@keyframes glow-pulse {
+  0% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 12px rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.3);
+  }
+}
+
+.important-btn {
+  animation: glow-pulse 2s infinite;
+}

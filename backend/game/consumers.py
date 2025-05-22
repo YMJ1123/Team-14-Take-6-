@@ -16,36 +16,25 @@ class GameConsumer(AsyncWebsocketConsumer):
         # 創建一個集合來存儲已經處理過分數扣除的玩家ID
         self.processed_players = set()
         
-        # 從 URL 參數中獲取用戶名和訪客狀態
+        # 從 URL 參數中獲取用戶名
         query_string = self.scope.get('query_string', b'').decode()
         query_params = dict(param.split('=') for param in query_string.split('&') if param)
         provided_username = query_params.get('username')
-        is_guest_param = query_params.get('is_guest', 'false').lower() == 'true'
         
-        # 檢查是否提供了用戶名
-        if not provided_username:
-            # 如果沒有提供用戶名，拒絕連接
+        # 檢查是否提供了用戶名且用戶已登錄
+        if not provided_username or not self.user.is_authenticated:
+            # 如果沒有提供用戶名或用戶未登入，拒絕連接
+            print(f"拒絕未登入或未提供用戶名的連接請求")
             await self.close()
             return
             
         await self.accept()
         
-        # 設置用戶名和顯示名稱
-        if not self.user.is_authenticated:
-            self.username = provided_username
-            self.display_name = provided_username
-            self.is_guest = True
-            
-            # 創建臨時訪客用戶並將其保存為 self.user
-            await self.create_guest_user(self.username)
-            
-            print(f"創建訪客: {self.username}")
-        else:
-            # 已登入用戶使用其實際用戶名
-            self.username = self.user.username
-            self.display_name = self.user.username
-            self.is_guest = False
-            print(f"已登入用戶: {self.username}")
+        # 已登入用戶使用其實際用戶名
+        self.username = self.user.username
+        self.display_name = self.user.username
+        self.is_guest = False
+        print(f"已登入用戶: {self.username}")
         
         # 獲取或創建遊戲房間，並將玩家添加到房間
         self.game_room = GameRoom.get_room(self.room_name)
@@ -1136,11 +1125,11 @@ class GameConsumer(AsyncWebsocketConsumer):
             for player_obj in players_queryset:
                 player_id = player_obj.user.id
                 display_name = None
-                is_guest = player_obj.user.username.startswith('訪客_')
+                is_guest = False  # 不再有訪客模式
                 
                 if hasattr(self, 'game_room') and player_id in self.game_room.player_display_names:
                     display_name = self.game_room.player_display_names[player_id]['display_name']
-                    is_guest = self.game_room.player_display_names[player_id]['is_guest']
+                    # is_guest 保持為 False
                 
                 result.append({
                     'id': player_id,
