@@ -310,13 +310,23 @@ class GameConsumer(AsyncWebsocketConsumer):
                         }
                     )
                     
+                    # 獲取正確的玩家用戶名
+                    player_username = player_name
+                    if not player_username:
+                        # 從玩家列表中查找
+                        players = await self.get_room_players()
+                        for p in players:
+                            if p['id'] == player_id:
+                                player_username = p['username']
+                                break
+                    
                     # 向其他玩家廣播等待消息
                     await self.channel_layer.group_send(
                         self.room_group_name,
                         {
                             'type': 'wait_choose_card',
                             'player_id': player_id,
-                            'player_name': player_name
+                            'player_name': player_username
                         }
                     )
                     return
@@ -518,7 +528,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         player_id = self.user.id
         
         # 添加詳細的日誌記錄
-        print(f"處理出牌請求: 玩家ID={player_id}, 玩家名稱={player_name}, 卡片索引={card_idx}, 卡片值={card_value}")
+        print(f"處理出牌請求: 玩家ID={player_id}, 玩家名稱={player_name}, 卡片索引={card_idx}")
         
         # 獲取玩家在遊戲中的索引
         player_index = await self.get_player_index()
@@ -588,13 +598,23 @@ class GameConsumer(AsyncWebsocketConsumer):
                     }
                 )
                 
+                # 獲取正確的玩家用戶名
+                player_username = player_name
+                if not player_username:
+                    # 從玩家列表中查找
+                    players = await self.get_room_players()
+                    for p in players:
+                        if p['id'] == player_id:
+                            player_username = p['username']
+                            break
+                
                 # 向其他玩家廣播等待消息
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'wait_choose_card',
                         'player_id': player_id,
-                        'player_name': player_name
+                        'player_name': player_username
                     }
                 )
                 
@@ -764,7 +784,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'wait_choose_card',
             'player_id': event.get('sender_id'),
-            'player_name': event.get('player_name')
+            'player_name': event.get('player_username')
         }))
     
     async def room_info(self, event):
@@ -979,11 +999,20 @@ class GameConsumer(AsyncWebsocketConsumer):
         if player_id == self.user.id:
             print("嗨嗨 我是需要選擇的玩家")
             return
-            
+        
+        # 從玩家列表中獲取正確的用戶名
+        player_name = event.get('player_username')
+        if not player_name and hasattr(self, 'game_room'):
+            # 優先從 game_room 中獲取用戶名
+            for player_info in await self.get_room_players():
+                if player_info['id'] == player_id:
+                    player_name = player_info['username']
+                    break
+        
         await self.send(text_data=json.dumps({
             'type': 'wait_choose_card',
             'player_id': player_id,
-            'player_name': event.get('player_name')
+            'player_name': player_name
         }))
 
     @database_sync_to_async

@@ -452,11 +452,7 @@ const GameRoom = () => {
                   )
                 ) : null}
               </div>
-              {/* 剩餘牌數顯示 */}
-              {!isGameStarted && <RemainingCards 
-                playerCount={playerCount} 
-                isGameStarted={isGameStarted}
-              />}
+              
             </>
           )}          
           <ChatBox socket={socket} />

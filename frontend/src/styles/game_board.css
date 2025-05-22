@@ -45,6 +45,7 @@
 .my-hand-row {
   background-color: rgba(24, 91, 41, 0.9);
   border: 2px solid #d4af37;
+  border-radius: 10px;
   min-height: 140px;
   box-shadow: 0 0 15px rgba(255, 215, 0, 0.3), inset 0 0 10px rgba(0, 0, 0, 0.4);
 }
@@ -115,23 +116,27 @@
 
 .player-name {
   margin-top: 5px;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: bold;
-  color: #ffffff;
+  /* color: #ffffff; */
+  color: #f5e6a9;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
   text-align: center;
 }
 
 .waiting-message {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  height: 100px;
+  width: auto;
+  height: auto;
   font-style: italic;
-  color: #ffffff;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+  color: #e0e0e0;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
   font-size: 1.1rem;
+  text-align: center;
+  line-height: 1.4;
 }
 
 /* My Hand integration */
@@ -139,6 +144,7 @@
   flex: 1;
   min-height: 120px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   background-color: rgba(5, 30, 12, 0.95) !important;
@@ -148,12 +154,25 @@
   color: #f5e6a9 !important;
 }
 
+.hand-title {
+  font-weight: bold;
+  color: #ffd700;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.5), 1px 1px 2px rgba(0, 0, 0, 0.7);
+  text-align: center;
+  padding: 10px 0;
+  font-size: 1.2rem;
+  /* border-bottom: 1px dashed rgba(212, 175, 55, 0.5); */
+  margin-bottom: 10px;
+  width: 100%;
+}
+
 .player-hand {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .hand-card {
@@ -163,7 +182,10 @@
 
 .hand-card.selected {
   transform: translateY(-10px);
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+  box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.6);
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.7));
+  border: 2px solid #ffd700;
+  border-radius: 8px;
 }
 
 .empty-hand-message {
@@ -337,7 +359,11 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;
   gap: 15px;
+  min-height: 180px;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
 .waiting-overlay {
@@ -346,17 +372,25 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.85));
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   border-radius: 8px;
   z-index: 10;
+  padding: 20px;
+  box-sizing: border-box;
+  backdrop-filter: blur(3px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .waiting-player {
   font-weight: bold;
-  color: #f39c12;
+  color: #ffd700;
+  font-size: 1.5rem;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5), 0 0 5px rgba(243, 156, 18, 0.7);
+  margin-bottom: 5px;
 }
 
 @keyframes slide-down {
@@ -482,7 +516,14 @@
 .rank-number {
   font-weight: bold;
   min-width: 40px;
-  text-align: center;
+  text-align: center; 
+  
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+  /* text-shadow: 
+    -1px -1px 0 #000,  
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000; */
 }
 
 .back-to-lobby-btn {
@@ -510,7 +551,7 @@
 }
 
 .eliminated-player {
-  background-color: rgba(231, 76, 60, 0.1);
+  background-color: rgba(231, 77, 60, 0.367);
   border-left: 4px solid #e74c3c;
 }
 
@@ -538,4 +579,5 @@
   align-items: center;
   box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
   animation: border-pulse 4s infinite alternate;
+  box-sizing: border-box;
 }

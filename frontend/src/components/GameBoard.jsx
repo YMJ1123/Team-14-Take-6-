@@ -303,7 +303,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
       }
       // 處理收哪排的消息
       if (data.type === "i_choose_row") {
-        console.log("我要選則收某排牌", data);
+        console.log("我要選擇收某排牌", data);
         // 設置需要選擇的列和每列對應的牛頭數
         const rowBullHeads = data.bull_heads;
         // // 獲取每列的牛頭數
@@ -817,6 +817,23 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     navigate('/');
   };
 
+  // 檢查是否為當前用戶（處理不同類型的ID比較）
+  const isCurrentUserById = (user) => {
+    if (!currentUser || !user) return false;
+    
+    return (
+      (typeof user.id === 'number' && typeof currentUser.id === 'number' && user.id === currentUser.id) ||
+      (typeof user.id === 'string' && typeof currentUser.id === 'string' && user.id === currentUser.id) ||
+      (typeof user.id === 'number' && typeof currentUser.id === 'string' && user.id === parseInt(currentUser.id)) ||
+      (typeof user.id === 'string' && typeof currentUser.id === 'number' && parseInt(user.id) === currentUser.id)
+    );
+  };
+  
+  // 檢查是否為獲勝者
+  const isCurrentUserWinner = (winner) => {
+    return isCurrentUserById(winner);
+  };
+  
   // 渲染遊戲結束畫面
   const renderGameOver = () => {
     if (!isGameOver || !gameOverData) return null;
@@ -824,7 +841,8 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     const { losers, winners, all_players } = gameOverData;
     const winner = winners[0];
     const loser = losers[0];
-    const isCurrentUserLoser = currentUser && loser.id === currentUser.id;
+    // 使用通用函數檢查是否為輸家
+    const isCurrentUserLoser = isCurrentUserById(loser);
     
     return (
       <div className="game-over-overlay">
@@ -835,6 +853,18 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
               '您的分數已歸零，遊戲結束！' : 
               `玩家 ${loser.username || loser.display_name}${!loser.username ? ' (訪客)' : ''} 分數歸零，遊戲結束！`}
           </p>
+
+          <div className="winner-section">
+            <h3>🏆 贏家</h3>
+            <div className="winner-info">
+              <span className="player-name">
+                {currentUser && isCurrentUserWinner(winner) ? '您' : (winner.username || winner.display_name)}
+                {currentUser && isCurrentUserWinner(winner) && <span className="self-indicator">（您自己）</span>}
+                {!(currentUser && isCurrentUserWinner(winner)) && !winner.username && " (訪客)"}
+              </span>
+              <span className="player-score">{winner.score} 分</span>
+            </div>
+          </div>
           
           <div className="loser-section">
             <h3>🥺 輸家</h3>
@@ -848,17 +878,6 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
             </div>
           </div>
           
-          <div className="winner-section">
-            <h3>🏆 贏家</h3>
-            <div className="winner-info">
-              <span className="player-name">
-                {currentUser && winner.id === currentUser.id ? '您' : (winner.username || winner.display_name)}
-                {currentUser && winner.id === currentUser.id && <span className="self-indicator">（您自己）</span>}
-                {!(currentUser && winner.id === currentUser.id) && !winner.username && " (訪客)"}
-              </span>
-              <span className="player-score">{winner.score} 分</span>
-            </div>
-          </div>
           
           <div className="all-players-ranking">
             <h3>所有玩家排名</h3>
@@ -866,12 +885,12 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
               {all_players.map((player, index) => (
                 <div 
                   key={`rank-${index}`} 
-                  className={`player-rank ${player.score <= 0 ? 'eliminated-player' : ''} ${currentUser && player.id === currentUser.id ? 'current-player' : ''}`}
+                  className={`player-rank ${player.score <= 0 ? 'eliminated-player' : ''} ${isCurrentUserById(player) ? 'current-player' : ''}`}
                 >
                   <span className="rank-number">#{index + 1}</span>
                   <span className="player-name">
-                    {currentUser && player.id === currentUser.id ? '您' : player.username}
-                    {currentUser && player.id === currentUser.id && <span className="self-indicator">（您自己）</span>}
+                    {isCurrentUserById(player) ? '您' : player.username}
+                    {isCurrentUserById(player) && <span className="self-indicator">（您自己）</span>}
                   </span>
                   <span className={`player-score ${player.score <= 0 ? 'negative-score' : ''}`}>
                     {player.score} 分
@@ -921,8 +940,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
         </div>
         
         {/* 整合進牌桌的我的手牌 - 移除框框 */}
-        <div className="my-hand-row">
-          <div className="row-header">我的手牌</div>
+        {/* <div className="my-hand-row"> */}
           <div className="my-hand-container" style={{
             backgroundColor: 'rgba(5, 30, 12, 0.95)',
             backgroundImage: 'linear-gradient(135deg, rgba(5, 25, 10, 0.9) 0%, rgba(8, 35, 15, 0.9) 50%, rgba(5, 25, 10, 0.9) 100%)',
@@ -930,6 +948,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
             borderRadius: '8px',
             boxShadow: '0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5)'
           }}>
+            <div className="hand-title">我的手牌</div>
             {isGameStarted && !isGameOver ? (
               hand.length > 0 ? (
                 <div className="player-hand" style={{
@@ -998,52 +1017,8 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                 </div>
               )}
           </div>
-        </div>
+        {/* </div> */}
       </div>
-      
-      {/* 剩餘牌組顯示 - 移到獨立區塊 */}
-      {isGameStarted && !isGameOver && renderRemainingCards()}
-      
-      {/* 同步按鈕 */}
-      {isGameStarted && !isGameOver && (
-        <div className="sync-button-container" style={{ textAlign: 'center', margin: '10px 0' }}>
-          <button 
-            onClick={syncRemainingCards}
-            disabled={isSyncing}
-            className="sync-button"
-            style={{
-              padding: '8px 15px',
-              background: isSyncing ? '#ccc' : syncSuccess ? '#27ae60' : '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: isSyncing ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.3s',
-              fontSize: '16px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {isSyncing ? (
-              <span>同步中...</span>
-            ) : syncSuccess ? (
-              <span>同步成功 ✓</span>
-            ) : (
-              <span>同步剩餘牌數</span>
-            )}
-          </button>
-          {lastSyncTime && (
-            <div style={{ 
-              fontSize: '12px', 
-              color: '#666', 
-              marginTop: '5px' 
-            }}>
-              上次同步: {lastSyncTime}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 };
