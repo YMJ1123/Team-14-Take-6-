@@ -943,7 +943,7 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                   {hand.map((card, index) => (
                     <div 
                       key={`hand-${index}`} 
-                      className={`hand-card ${selectedCard === index ? 'selected' : ''}`}
+                      className={`hand-card ${selectedCard === index ? 'selected' : ''} ${playedCard !== null ? 'card-played' : ''}`}
                       style={{ 
                         transform: `rotate(${Math.random() * 2 - 1}deg)`,
                         marginLeft: index > 0 ? '-25px' : '0' /* Increased overlap from -15px to -25px */
@@ -956,6 +956,10 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
                         onClick={() => playCard(index)}
                         onDoubleClick={() => {
                           // On double-click, automatically select and confirm the card
+                          // 如果已經出牌，不允許再選
+                          if (playedCard !== null) {
+                            return;
+                          }
                           setSelectedCard(index);
                           setTimeout(() => confirmPlayCard(), 10);
                         }}

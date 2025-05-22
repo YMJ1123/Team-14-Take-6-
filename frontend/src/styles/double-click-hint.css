@@ -13,7 +13,8 @@
   pointer-events: none;
 }
 
-.player-hand .hand-card:hover:after {
+/* Only show hint when hovering and no card has been played yet */
+.player-hand .hand-card:not(.card-played):hover:after {
   opacity: 1;
 }
 
@@ -24,6 +25,12 @@
   100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.6); }
 }
 
+/* Only apply animation to cards that are not played and when no card has been selected yet */
 .player-hand .card:not(.played) {
   animation: playable-flash 2s infinite;
+}
+
+/* Stop the animation when a card has been played */
+.player-hand .card-played .card:not(.played) {
+  animation: none;
 }

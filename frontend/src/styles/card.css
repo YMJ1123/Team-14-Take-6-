@@ -16,6 +16,10 @@
   background-size: 85%;
   background-image: url('/images/bull-head-bg.png');
   background-color: rgba(5, 25, 10, 0.8);
+  user-select: none; /* Prevent text selection */
+  -webkit-user-select: none; /* For Safari */
+  -moz-user-select: none; /* For Firefox */
+  -ms-user-select: none; /* For IE/Edge */
 }
 
 /* Override the background colors when showing in player's hand */
@@ -54,6 +58,10 @@
   position: relative;
   z-index: 1;
   background-color: transparent !important;
+  user-select: none; /* Ensure card content cannot be selected */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .card-number {
@@ -64,6 +72,10 @@
   font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
   margin-top: 5px;
   text-shadow: 0 0 5px rgba(255, 215, 0, 0.8);
+  user-select: none; /* Prevent text selection */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .card-small .card-number {
@@ -77,6 +89,10 @@
   justify-content: center;
   padding: 3px;
   margin-bottom: 5px;
+  user-select: none; /* Prevent text selection */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .bull-head-icon {
