@@ -184,3 +184,8 @@ SESSION_COOKIE_SECURE = True
 # CSRF Cookie Settings for cross-domain POST requests
 CSRF_COOKIE_SAMESITE = "None"
 CSRF_COOKIE_SECURE = True
+
+# Trusted origins for CSRF
+CSRF_TRUSTED_ORIGINS = [
+    "https://take6.netlify.app",
+]
