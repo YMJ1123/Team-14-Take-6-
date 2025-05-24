@@ -41,6 +41,11 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
   const [isGameOver, setIsGameOver] = useState(false);
   // 遊戲結束數據
   const [gameOverData, setGameOverData] = useState(null);
+  const [countdown, setCountdown] = useState(60);
+  const timerRef = useRef(null);
+  const [isWaitingForPlay, setIsWaitingForPlay] = useState(false);
+  const [chooseRowCountdown, setChooseRowCountdown] = useState(30);
+  const chooseRowTimerRef = useRef(null);
   
   // 獲取當前登入用戶資訊
   const fetchCurrentUser = async () => {
@@ -705,6 +710,8 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     // 重置選擇狀態
     setSelectedCard(null);
     setShowConfirmButton(false);
+    setCountdown(60);
+    if (timerRef.current) clearInterval(timerRef.current);
   };
 
   // 取消選擇
@@ -908,9 +915,109 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
     );
   };
 
+  useEffect(() => {
+    if (!isGameOver && isGameStarted && hand.length > 0 && playedCard === null && choosingRows.length === 0 && waitingPlayer === null) {
+      setIsWaitingForPlay(true);
+    } else {
+      setIsWaitingForPlay(false);
+    }
+  }, [isGameOver, isGameStarted, hand, playedCard, choosingRows, waitingPlayer]);
+
+  useEffect(() => {
+    if (isWaitingForPlay) {
+      setCountdown(60);
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isWaitingForPlay]);
+
+  useEffect(() => {
+    if (countdown === 0 && isWaitingForPlay) {
+      autoPlayLastCard();
+    }
+  }, [countdown, isWaitingForPlay]);
+
+  const autoPlayLastCard = () => {
+    if (hand.length === 0) return;
+    const lastIndex = hand.length - 1;
+    const card = hand[lastIndex];
+
+    setPlayedCard(card);
+
+    // 從手牌中移除該牌
+    const newHand = [...hand];
+    newHand.splice(lastIndex, 1);
+    setHand(newHand);
+
+    // 取得自己在房間中的索引
+    const myIndex = findMyPlayerIndex();
+
+    // 準備玩家名稱
+    let playerName = "訪客";
+    if (currentUser && currentUser.username) {
+      playerName = currentUser.username;
+    } else if (players.length > 0 && playerId) {
+      const playerInfo = players.find(p => p.id === playerId);
+      if (playerInfo) {
+        playerName = playerInfo.username || playerInfo.display_name || "訪客";
+      }
+    }
+
+    // 發送出牌信息到服務器
+    socket.send(JSON.stringify({
+      type: "play_card",
+      card_idx: lastIndex,
+      player_id: playerId,
+      player_index: myIndex,
+      player_name: playerName,
+      value: card.value,
+      bull_heads: card.bull_heads
+    }));
+
+    // 重置選擇狀態
+    setSelectedCard(null);
+    setShowConfirmButton(false);
+    setCountdown(30);
+    if (timerRef.current) clearInterval(timerRef.current);
+  };
+
+  useEffect(() => {
+    if (choosingRows.length > 0 || waitingPlayer !== null) {
+      setChooseRowCountdown(30);
+      if (chooseRowTimerRef.current) clearInterval(chooseRowTimerRef.current);
+      chooseRowTimerRef.current = setInterval(() => {
+        setChooseRowCountdown(prev => prev - 1);
+      }, 1000);
+    } else {
+      if (chooseRowTimerRef.current) clearInterval(chooseRowTimerRef.current);
+    }
+    return () => {
+      if (chooseRowTimerRef.current) clearInterval(chooseRowTimerRef.current);
+    };
+  }, [choosingRows, waitingPlayer]);
+
+  useEffect(() => {
+    if (chooseRowCountdown === 0 && choosingRows.length > 0) {
+      handleChooseRow(0); // 自動選擇第一列
+    }
+  }, [chooseRowCountdown, choosingRows]);
+
   if (!isPrepared) {
     return null;
   }
+
+  const formatTime = (sec) => {
+    const m = String(Math.floor(sec / 60)).padStart(2, '0');
+    const s = String(sec % 60).padStart(2, '0');
+    return `${m}:${s}`;
+  };
 
   return (
     <div className="game-board-container">
@@ -1019,6 +1126,38 @@ const GameBoard = ({ socket, isPrepared, isGameStarted }) => {
           </div>
         {/* </div> */}
       </div>
+      {isWaitingForPlay && (
+        <div
+          style={{
+            textAlign: "center",
+            color: "rgba(255,0,0,0.85)",
+            fontSize: "3rem",
+            fontWeight: "bold",
+            margin: "20px auto 0 auto",
+            width: "fit-content",
+            padding: "8px 32px",
+            letterSpacing: "2px"
+          }}
+        >
+          {formatTime(countdown)}
+        </div>
+      )}
+      {(choosingRows.length > 0 || waitingPlayer !== null) && (
+        <div
+          style={{
+            textAlign: "center",
+            color: "rgba(255,0,0,0.85)",
+            fontSize: "3rem",
+            fontWeight: "bold",
+            margin: "20px auto 0 auto",
+            width: "fit-content",
+            padding: "8px 32px",
+            letterSpacing: "2px"
+          }}
+        >
+          {formatTime(chooseRowCountdown)}
+        </div>
+      )}
     </div>
   );
 };
