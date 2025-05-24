@@ -7,7 +7,14 @@ import Scoreboard from '../components/Scoreboard';
 import RemainingCards from '../components/RemainingCards';
 import { useAuth } from '../components/AuthProvider';
 import '../styles/game_room.css';
-import { csrfHeader } from '../utils/csrftoken';
+
+function getCookie(name) {
+  const cookieValue = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(name + '='))
+    ?.split('=')[1];
+  return cookieValue;
+}
 
 const GameRoom = () => {
   const { roomName } = useParams();
@@ -239,7 +246,7 @@ const GameRoom = () => {
         method: 'DELETE',
         credentials: 'include',
         headers: {
-          ...csrfHeader,
+          'X-CSRFToken': getCookie('csrftoken'),
         },
       })
         .then(res => {

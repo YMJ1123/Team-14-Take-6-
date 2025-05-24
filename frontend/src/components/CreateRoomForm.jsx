@@ -1,7 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/home.css";
-import { csrfHeader } from "../utils/csrftoken";
+
+function getCookie(name) {
+  const cookieValue = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(name + '='))
+    ?.split('=')[1];
+  return cookieValue;
+}
 
 const CreateRoomForm = ({ onCreate }) => {
   const navigate = useNavigate();
@@ -13,7 +20,7 @@ const CreateRoomForm = ({ onCreate }) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...csrfHeader,
+        'X-CSRFToken': getCookie('csrftoken'),
       },
       credentials: "include",
       body: JSON.stringify({ name: roomName }),
