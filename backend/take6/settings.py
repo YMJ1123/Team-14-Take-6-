@@ -154,6 +154,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://team-14-take-6.onrender.com",
+    "https://take6.netlify.app",
+    "https://take6.netlify.app/*",
 ]
 CORS_ALLOW_CREDENTIALS = True  # ✅ 允許跨域請求附帶認證信息（cookies）
 CORS_ALLOW_HEADERS = [
