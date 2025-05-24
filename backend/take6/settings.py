@@ -180,3 +180,7 @@ CORS_ALLOW_HEADERS = [
 ]
 SESSION_COOKIE_SAMESITE = "None"
 SESSION_COOKIE_SECURE = True
+
+# CSRF Cookie Settings for cross-domain POST requests
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
