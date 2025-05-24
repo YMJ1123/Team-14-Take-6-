@@ -18,7 +18,7 @@ const RoomList = () => {
       // 1. 獲取房間列表（不帶時間戳）
       const roomsResponse = await fetch(
         `${API_BASE}/api/rooms/`,
-        { cache: "no-store" }
+        { cache: "no-store", credentials: "include" }
       );
       if (!roomsResponse.ok) {
         throw new Error("無法獲取房間列表");
@@ -35,7 +35,7 @@ const RoomList = () => {
           try {
             const resp = await fetch(
               `${API_BASE}/api/rooms/${room.id}/player_count/`,
-              { cache: "no-store" }
+              { cache: "no-store", credentials: "include" }
             );
             if (resp.ok) {
               const data = await resp.json();
@@ -47,11 +47,12 @@ const RoomList = () => {
             console.log(`player_count 端點失敗:`, err);
           }
 
-          // 方法2: active_rooms endpoint
+          // Method 2: active_rooms endpoint (REMOVED)
+          /*
           try {
             const resp = await fetch(
               `${API_BASE}/api/active_rooms/${room.name}/`,
-              { cache: "no-store" }
+              { cache: "no-store", credentials: "include" } 
             );
             if (resp.ok) {
               const data = await resp.json();
@@ -62,12 +63,13 @@ const RoomList = () => {
           } catch (err) {
             console.log(`active_rooms 端點失敗:`, err);
           }
+          */
 
           // 方法3: games endpoint
           try {
             const resp = await fetch(
               `${API_BASE}/api/games/?room=${room.id}`,
-              { cache: "no-store" }
+              { cache: "no-store", credentials: "include" }
             );
             if (resp.ok) {
               const data = await resp.json();

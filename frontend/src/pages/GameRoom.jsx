@@ -8,6 +8,14 @@ import RemainingCards from '../components/RemainingCards';
 import { useAuth } from '../components/AuthProvider';
 import '../styles/game_room.css';
 
+function getCookie(name) {
+  const cookieValue = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(name + '='))
+    ?.split('=')[1];
+  return cookieValue;
+}
+
 const GameRoom = () => {
   const { roomName } = useParams();
   const navigate = useNavigate();
@@ -189,7 +197,7 @@ const GameRoom = () => {
     if (!roomName) return;
     
     // Get room ID for delete operation
-    fetch(`https://team-14-take-6.onrender.com/api/rooms/?name=${roomName}`)
+    fetch(`https://team-14-take-6.onrender.com/api/rooms/?name=${roomName}`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         if (data.length > 0) {
@@ -236,6 +244,10 @@ const GameRoom = () => {
     if (confirm(`確定要刪除「${roomName}」房間嗎？`)) {
       fetch(`https://team-14-take-6.onrender.com/api/rooms/${roomId}/`, {
         method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+        },
       })
         .then(res => {
           if (res.ok) {

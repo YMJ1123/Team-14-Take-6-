@@ -2,6 +2,14 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/home.css";
 
+function getCookie(name) {
+  const cookieValue = document.cookie
+    .split('; ')
+    .find(row => row.startsWith(name + '='))
+    ?.split('=')[1];
+  return cookieValue;
+}
+
 const CreateRoomForm = ({ onCreate }) => {
   const navigate = useNavigate();
   const [roomName, setRoomName] = useState("");
@@ -10,7 +18,11 @@ const CreateRoomForm = ({ onCreate }) => {
     e.preventDefault();
     fetch("https://team-14-take-6.onrender.com/api/rooms/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      credentials: "include",
       body: JSON.stringify({ name: roomName }),
     })
       .then(res => {

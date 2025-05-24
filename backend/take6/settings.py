@@ -42,16 +42,15 @@ INSTALLED_APPS = [
     # 第三方應用
     'rest_framework',
     'channels',
+    "corsheaders",
     
     # 自訂應用
     'game',
     'users',
-
-    'corsheaders',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware', # 要放最前面 才不會沒作用
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
