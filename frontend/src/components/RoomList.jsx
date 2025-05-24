@@ -15,12 +15,9 @@ const RoomList = () => {
   const fetchRooms = useCallback(async () => {
     setLoading(true);
     try {
-      // 加時間戳以便在 fetch options 裡做 no-store cache
-      const timestamp = new Date().getTime();
-
-      // 1. 獲取房間列表
+      // 1. 獲取房間列表（不帶時間戳）
       const roomsResponse = await fetch(
-        `${API_BASE}/api/rooms/?_=${timestamp}`,
+        `${API_BASE}/api/rooms/`,
         { cache: "no-store" }
       );
       if (!roomsResponse.ok) {
@@ -36,92 +33,82 @@ const RoomList = () => {
 
           // 方法1: player_count endpoint
           try {
-            const playerCountResponse = await fetch(
-              `${API_BASE}/api/rooms/${room.id}/player_count/?_=${timestamp}`,
+            const resp = await fetch(
+              `${API_BASE}/api/rooms/${room.id}/player_count/`,
               { cache: "no-store" }
             );
-            if (playerCountResponse.ok) {
-              const playerCountData = await playerCountResponse.json();
-              if (playerCountData.player_count !== undefined) {
-                counts.push(playerCountData.player_count);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.player_count !== undefined) {
+                counts.push(data.player_count);
               }
             }
-          } catch (error) {
-            console.log(
-              `使用 player_count 端點獲取房間 ${room.name} 的玩家數量失敗:`,
-              error
-            );
+          } catch (err) {
+            console.log(`player_count 端點失敗:`, err);
           }
 
           // 方法2: active_rooms endpoint
           try {
-            const wsRoomResponse = await fetch(
-              `${API_BASE}/api/active_rooms/${room.name}/?_=${timestamp}`,
+            const resp = await fetch(
+              `${API_BASE}/api/active_rooms/${room.name}/`,
               { cache: "no-store" }
             );
-            if (wsRoomResponse.ok) {
-              const wsRoomData = await wsRoomResponse.json();
-              if (wsRoomData.player_count !== undefined) {
-                counts.push(wsRoomData.player_count);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.player_count !== undefined) {
+                counts.push(data.player_count);
               }
             }
-          } catch (error) {
-            console.log(
-              `使用 active_rooms 端點獲取房間 ${room.name} 的玩家數量失敗:`,
-              error
-            );
+          } catch (err) {
+            console.log(`active_rooms 端點失敗:`, err);
           }
 
-          // 方法3: 從 games endpoint 取得
+          // 方法3: games endpoint
           try {
-            const gameResponse = await fetch(
-              `${API_BASE}/api/games/?room=${room.id}&_=${timestamp}`,
+            const resp = await fetch(
+              `${API_BASE}/api/games/?room=${room.id}`,
               { cache: "no-store" }
             );
-            if (gameResponse.ok) {
-              const gameData = await gameResponse.json();
-              if (Array.isArray(gameData) && gameData.length > 0) {
-                if (Array.isArray(gameData[0].players)) {
-                  counts.push(gameData[0].players.length);
+            if (resp.ok) {
+              const data = await resp.json();
+              if (Array.isArray(data) && data.length > 0) {
+                if (Array.isArray(data[0].players)) {
+                  counts.push(data[0].players.length);
                 }
-                if (gameData[0].connected_players) {
+                if (data[0].connected_players) {
                   counts.push(
-                    Object.keys(gameData[0].connected_players).length
+                    Object.keys(data[0].connected_players).length
                   );
                 }
               }
             }
-          } catch (error) {
-            console.log(
-              `使用 games 端點獲取房間 ${room.name} 的玩家數量失敗:`,
-              error
-            );
+          } catch (err) {
+            console.log(`games 端點失敗:`, err);
           }
 
           // 取最常見的值
           if (counts.length > 0) {
-            const countMap = {};
-            let maxCount = 0;
-            let mostFrequent = 0;
+            const freq = {};
+            let best = 0, maxCount = 0;
             counts.forEach((c) => {
-              countMap[c] = (countMap[c] || 0) + 1;
-              if (countMap[c] > maxCount) {
-                maxCount = countMap[c];
-                mostFrequent = c;
+              freq[c] = (freq[c] || 0) + 1;
+              if (freq[c] > maxCount) {
+                maxCount = freq[c];
+                best = c;
               }
             });
-            playerCount = mostFrequent;
+            playerCount = best;
           }
 
           return {
             ...room,
             playerCount: Math.max(0, playerCount),
-            _debug_counts: counts,
+            _debug_counts: counts
           };
         })
       );
 
-      // 更新 state，並根據變化決定是否重試
+      // 更新 state 並控制重試
       setRooms((prev) => {
         const needsRefresh = roomsWithPlayers.some((newR, i) => {
           const oldR = prev[i];
