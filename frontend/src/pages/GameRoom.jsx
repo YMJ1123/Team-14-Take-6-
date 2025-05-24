@@ -43,7 +43,7 @@ const GameRoom = () => {
     
     // 先獲取用戶資訊
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/current_user/', {
+      const response = await fetch('https://team-14-take-6.onrender.com/api/auth/current_user/', {
         credentials: 'include'
       });
       const userData = await response.json();
@@ -51,7 +51,7 @@ const GameRoom = () => {
       console.log("User data from API:", userData);  // 調試輸出
       
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = '127.0.0.1:8000';
+      const host = 'team-14-take-6.onrender.com';
       let wsUrl = `${protocol}//${host}/ws/game/${roomName}/`;
       
       // 檢查是否已登入，有兩種可能的API響應格式
@@ -189,7 +189,7 @@ const GameRoom = () => {
     if (!roomName) return;
     
     // Get room ID for delete operation
-    fetch(`http://127.0.0.1:8000/api/rooms/?name=${roomName}`)
+    fetch(`https://team-14-take-6.onrender.com/api/rooms/?name=${roomName}`)
       .then(res => res.json())
       .then(data => {
         if (data.length > 0) {
@@ -234,7 +234,7 @@ const GameRoom = () => {
     }
 
     if (confirm(`確定要刪除「${roomName}」房間嗎？`)) {
-      fetch(`http://127.0.0.1:8000/api/rooms/${roomId}/`, {
+      fetch(`https://team-14-take-6.onrender.com/api/rooms/${roomId}/`, {
         method: 'DELETE',
       })
         .then(res => {
@@ -467,7 +467,7 @@ const GameRoom = () => {
               <ol>
                 <li>您已經成功登入（目前用戶：{isAuthenticated ? user?.username : '未登入'}）</li>
                 <li>Django 後端伺服器是否已啟動（使用 daphne 命令）</li>
-                <li>伺服器是否運行在 127.0.0.1:8000 上</li>
+                <li>伺服器是否運行在 team-14-take-6.onrender.com 上</li>
                 <li>伺服器的 CORS 設定是否正確</li>
               </ol>
               <button onClick={() => window.location.reload()} className="retry-btn">

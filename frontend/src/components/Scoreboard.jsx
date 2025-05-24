@@ -8,7 +8,7 @@ const Scoreboard = ({ socket }) => {
   // 獲取當前用戶信息
   const fetchCurrentUser = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/current_user/', {
+      const response = await fetch('https://team-14-take-6.onrender.com/api/auth/current_user/', {
         credentials: 'include'
       });
       const data = await response.json();

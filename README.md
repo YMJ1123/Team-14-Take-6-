@@ -58,7 +58,7 @@ cd backend
 
 daphne -p 8000 take6.asgi:application
 
-打開 127.0.0.1:8000 看畫面
+打開 team-14-take-6.onrender.com 看畫面
 
 原本這個指令只支援http不支援WebSocket: python manage.py runserver
 
@@ -207,8 +207,8 @@ daphne -p 8000 take6.asgi:application
 - 0422 0007 hyc
     - 把vite+react加上去
     - 前端要在http://localhost:5173看
-    - 後端可以在127.0.0.1:8000看資料庫內容
-        - 例如: 127.0.0.1:8000/api/rooms 可以看到全部的房間
+    - 後端可以在team-14-take-6.onrender.com看資料庫內容
+        - 例如: team-14-take-6.onrender.com/api/rooms 可以看到全部的房間
         - 因為有用WebSocket所以開的方法和之前不同 (詳閱上面的解說)
     - 按下主頁的"創建"新房間 會跳轉到 http://localhost:5173/game/"房間名稱"/
     - 主頁是pages/Home.jsx

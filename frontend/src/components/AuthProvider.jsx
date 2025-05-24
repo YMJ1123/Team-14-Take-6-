@@ -7,7 +7,7 @@ export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
 
 // Define the API base URL
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = 'https://team-14-take-6.onrender.com';
 
 function getCookie(name) {
   const cookieValue = document.cookie

@@ -17,7 +17,7 @@ const RoomList = () => {
       const timestamp = new Date().getTime();
       
       // 獲取房間列表
-      const roomsResponse = await fetch(`http://127.0.0.1:8000/api/rooms/?_=${timestamp}`);
+      const roomsResponse = await fetch(`https://team-14-take-6.onrender.com/api/rooms/?_=${timestamp}`);
       if (!roomsResponse.ok) {
         throw new Error("無法獲取房間列表");
       }
@@ -32,7 +32,7 @@ const RoomList = () => {
           
           try {
             // 方法1: 使用專門的玩家數量API端點 (添加時間戳防止快取)
-            const playerCountResponse = await fetch(`http://127.0.0.1:8000/api/rooms/${room.id}/player_count/?_=${timestamp}`);
+            const playerCountResponse = await fetch(`https://team-14-take-6.onrender.com/api/rooms/${room.id}/player_count/?_=${timestamp}`);
             if (playerCountResponse.ok) {
               const playerCountData = await playerCountResponse.json();
               if (playerCountData.player_count !== undefined) {
@@ -45,7 +45,7 @@ const RoomList = () => {
           
           try {
             // 方法2: 檢查WebSocket活躍房間 (添加時間戳防止快取)
-            const wsRoomResponse = await fetch(`http://127.0.0.1:8000/api/active_rooms/${room.name}/?_=${timestamp}`);
+            const wsRoomResponse = await fetch(`https://team-14-take-6.onrender.com/api/active_rooms/${room.name}/?_=${timestamp}`);
             if (wsRoomResponse.ok) {
               const wsRoomData = await wsRoomResponse.json();
               if (wsRoomData && wsRoomData.player_count !== undefined) {
@@ -58,7 +58,7 @@ const RoomList = () => {
           
           try {
             // 方法3: 從遊戲會話獲取 (添加時間戳防止快取)
-            const gameResponse = await fetch(`http://127.0.0.1:8000/api/games/?room=${room.id}&_=${timestamp}`);
+            const gameResponse = await fetch(`https://team-14-take-6.onrender.com/api/games/?room=${room.id}&_=${timestamp}`);
             if (gameResponse.ok) {
               const gameData = await gameResponse.json();
               

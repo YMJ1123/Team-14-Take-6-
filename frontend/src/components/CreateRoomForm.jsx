@@ -8,7 +8,7 @@ const CreateRoomForm = ({ onCreate }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch("http://127.0.0.1:8000/api/rooms/", {
+    fetch("https://team-14-take-6.onrender.com/api/rooms/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: roomName }),
