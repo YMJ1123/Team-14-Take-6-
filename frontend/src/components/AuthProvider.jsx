@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { csrfHeader } from '../utils/csrftoken'; // Corrected path
 
 // Create the authentication context
 export const AuthContext = createContext(null);
@@ -8,15 +9,6 @@ export const useAuth = () => useContext(AuthContext);
 
 // Define the API base URL
 const API_BASE_URL = 'https://team-14-take-6.onrender.com';
-
-function getCookie(name) {
-  const cookieValue = document.cookie
-    .split('; ')
-    .find(row => row.startsWith(name + '='))
-    ?.split('=')[1];
-  return cookieValue;
-}
-
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -64,7 +56,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken'),  // ✅ 加這一行
+          ...csrfHeader, // Use imported csrfHeader
         },
         credentials: 'include',
         body: JSON.stringify({ username, password }),
@@ -99,7 +91,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken'),  // ✅ 加這一行
+          ...csrfHeader, // Use imported csrfHeader
         },
         credentials: 'include',
         body: JSON.stringify({ username, password }),
@@ -135,7 +127,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken'),  // ✅ 加這一行
+          ...csrfHeader, // Use imported csrfHeader
         },
         credentials: 'include',
       });
