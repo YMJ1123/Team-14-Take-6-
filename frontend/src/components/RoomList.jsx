@@ -24,13 +24,13 @@ const RoomList = () => {
         throw new Error("無法獲取房間列表");
       }
       const roomsData = await roomsResponse.json();
-
+      
       // 2. 為每個房間獲取玩家數量
       const roomsWithPlayers = await Promise.all(
         roomsData.map(async (room) => {
           let playerCount = 0;
           let counts = [];
-
+          
           // 方法1: player_count endpoint
           try {
             const resp = await fetch(
@@ -46,7 +46,7 @@ const RoomList = () => {
           } catch (err) {
             console.log(`player_count 端點失敗:`, err);
           }
-
+          
           // Method 2: active_rooms endpoint (REMOVED)
           /*
           try {
@@ -87,7 +87,7 @@ const RoomList = () => {
           } catch (err) {
             console.log(`games 端點失敗:`, err);
           }
-
+          
           // 取最常見的值
           if (counts.length > 0) {
             const freq = {};
@@ -101,15 +101,15 @@ const RoomList = () => {
             });
             playerCount = best;
           }
-
-          return {
-            ...room,
+          
+          return { 
+            ...room, 
             playerCount: Math.max(0, playerCount),
             _debug_counts: counts
           };
         })
       );
-
+      
       // 更新 state 並控制重試
       setRooms((prev) => {
         const needsRefresh = roomsWithPlayers.some((newR, i) => {
@@ -126,7 +126,7 @@ const RoomList = () => {
         }
         return roomsWithPlayers;
       });
-
+      
       setLoading(false);
       setLastUpdated(new Date());
     } catch (err) {

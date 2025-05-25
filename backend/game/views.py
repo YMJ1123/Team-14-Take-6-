@@ -7,6 +7,9 @@ from django.shortcuts import get_object_or_404
 from .models import Room, GameSession, Player
 from .serializers import RoomSerializer, GameSessionSerializer, PlayerSerializer
 from .game_room import GameRoom, active_rooms
+from django.utils import timezone
+from datetime import timedelta
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 
 def home(request):
     return HttpResponse("Welcome to Take 6! Online Game API")
@@ -38,12 +41,16 @@ def room_list(request):
 #     # 傳遞房間列表到模板
 #     return render(request, 'index.html', {'rooms': active_rooms})
 
+# 只給這個 ViewSet 用的 CSRF 豁免版本
+class CsrfExemptSessionAuthentication(SessionAuthentication):
+    def enforce_csrf(self, request):
+        return              # ← 直接跳過 CsrfViewMiddleware 的驗證
+
 class RoomViewSet(viewsets.ModelViewSet):
     queryset = Room.objects.filter(active=True)
     serializer_class = RoomSerializer
-    # 測試階段可以暫時移除權限控制
-    # permission_classes = [permissions.IsAuthenticated]
-    permission_classes = [permissions.AllowAny]  # 允許所有人訪問
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = [CsrfExemptSessionAuthentication, BasicAuthentication]
     
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):

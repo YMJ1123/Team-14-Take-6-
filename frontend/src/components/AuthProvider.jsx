@@ -1,7 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { getCsrfHeader } from '../utils/csrftoken'; // Import getCsrfHeader
-import Cookies from 'js-cookie'; // Import Cookies
-import { ensureCsrfToken } from '../utils/csrftoken'; // Import ensureCsrfToken
+import { csrfHeader } from '../utils/csrftoken'; // Import csrfHeader
 
 // Create the authentication context
 export const AuthContext = createContext(null);
@@ -17,21 +15,17 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check for current user and pre-fetch CSRF token on initial load
+  // Check for current user on initial load
   useEffect(() => {
-    const initializeAuth = async () => {
+    const checkCurrentUser = async () => {
       try {
-        // Ensure CSRF token cookie is set by calling the utility function
-        await ensureCsrfToken(); 
-        console.log('AuthProvider: Current csrftoken cookie after ensureCsrfToken:', Cookies.get("csrftoken"));
-
         console.log('Checking current user status...');
         const response = await fetch(`${API_BASE_URL}/api/auth/current_user/`, {
           headers: {
             'Content-Type': 'application/json',
             // For GET requests, CSRF token in header is not strictly necessary if using session auth
             // However, if your current_user endpoint is ever changed to POST or requires it for other reasons:
-            // ...getCsrfHeader(), 
+            // ...csrfHeader, 
           },
           credentials: 'include'
         });
@@ -51,7 +45,7 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    initializeAuth();
+    checkCurrentUser();
   }, []);
 
   // Login function
@@ -64,7 +58,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getCsrfHeader(), // Use getCsrfHeader()
+          ...csrfHeader, // Use csrfHeader
         },
         credentials: 'include',
         body: JSON.stringify({ username, password }),
@@ -99,7 +93,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getCsrfHeader(), // Use getCsrfHeader()
+          ...csrfHeader, // Use csrfHeader
         },
         credentials: 'include',
         body: JSON.stringify({ username, password }),
@@ -135,7 +129,7 @@ export const AuthProvider = ({ children }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...getCsrfHeader(), // Use getCsrfHeader()
+          ...csrfHeader, // Use csrfHeader
         },
         credentials: 'include',
       });

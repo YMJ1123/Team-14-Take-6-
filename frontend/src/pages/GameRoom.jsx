@@ -7,7 +7,7 @@ import Scoreboard from '../components/Scoreboard';
 import RemainingCards from '../components/RemainingCards';
 import { useAuth } from '../components/AuthProvider';
 import '../styles/game_room.css';
-import { getCsrfHeader } from "../utils/csrftoken";
+import { csrfHeader } from "../utils/csrftoken";
 
 const GameRoom = () => {
   const { roomName } = useParams();
@@ -239,7 +239,7 @@ const GameRoom = () => {
         method: 'DELETE',
         credentials: 'include',
         headers: {
-          ...getCsrfHeader(),
+          ...csrfHeader,
         },
       })
         .then(res => {
