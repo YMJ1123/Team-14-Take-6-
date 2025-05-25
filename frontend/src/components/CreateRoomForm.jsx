@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/home.css";
-import { csrfHeader } from "../utils/csrftoken";
+import { getCsrfHeader } from "../utils/csrftoken";
 
 const CreateRoomForm = ({ onCreate }) => {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ const CreateRoomForm = ({ onCreate }) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...csrfHeader,
+        ...getCsrfHeader(),
       },
       credentials: "include",
       body: JSON.stringify({ name: roomName }),
