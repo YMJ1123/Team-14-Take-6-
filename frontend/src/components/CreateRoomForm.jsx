@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/home.css";
 import { getCsrfHeader } from "../utils/csrftoken";
+import Cookies from "js-cookie";
 
 const CreateRoomForm = ({ onCreate }) => {
   const navigate = useNavigate();
@@ -9,12 +10,17 @@ const CreateRoomForm = ({ onCreate }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const csrfTokenValue = Cookies.get("csrftoken");
+    const headers = {
+      "Content-Type": "application/json",
+      ...getCsrfHeader(),
+    };
+    console.log('CreateRoomForm: Attempting to create room with CSRF Token Cookie:', csrfTokenValue);
+    console.log('CreateRoomForm: Headers being sent:', headers);
+
     fetch("https://team-14-take-6.onrender.com/api/rooms/", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...getCsrfHeader(),
-      },
+      headers: headers,
       credentials: "include",
       body: JSON.stringify({ name: roomName }),
     })

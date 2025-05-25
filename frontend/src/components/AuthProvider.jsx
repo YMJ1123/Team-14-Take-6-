@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { getCsrfHeader } from '../utils/csrftoken'; // Import getCsrfHeader
+import Cookies from 'js-cookie'; // Import Cookies
 
 // Create the authentication context
 export const AuthContext = createContext(null);
@@ -24,7 +25,7 @@ export const AuthProvider = ({ children }) => {
         await fetch(`${API_BASE_URL}/api/auth/csrf_token/`, {
           credentials: "include"
         });
-        console.log('CSRF token pre-fetch complete.');
+        console.log('CSRF token pre-fetch complete. Current csrftoken cookie:', Cookies.get("csrftoken")); // Log after pre-fetch
 
         console.log('Checking current user status...');
         const response = await fetch(`${API_BASE_URL}/api/auth/current_user/`, {
