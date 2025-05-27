@@ -85,47 +85,51 @@ class GameConsumer(AsyncWebsocketConsumer):
         )
 
     async def disconnect(self, close_code):
-        # 獲取將要離開的用戶名
-        username = getattr(self, 'username', None) or (
-            self.user.username if hasattr(self, 'user') and self.user.is_authenticated else "未知用戶"
-        )
-        
-        # 從共享房間中移除玩家
-        if hasattr(self, 'game_room'):
-            self.game_room.remove_player(self.user.id)
-            # 如果房間為空，可以考慮移除房間
-            if self.game_room.get_player_count() == 0:
-                GameRoom.remove_room(self.room_name)
-        
-        # 移除離開的玩家（包括訪客）
-        await self.remove_player_from_room()
-        
-        # 通知其他用戶有人離開
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'user_notification',
-                'message': f'{username} 已離開遊戲',
-                'username': "系統"
-            }
-        )
-        
-        # 更新房間玩家列表
-        players = await self.get_room_players()
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'room_info',
-                'players': players,
-                'room': self.room_name
-            }
-        )
-        
-        # 離開房間群組
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
+        # Only proceed if the user was properly identified (self.username was set)
+        if hasattr(self, 'username') and self.username:
+            username_to_display = self.username
+            
+            # 從共享房間中移除玩家
+            if hasattr(self, 'game_room'):
+                self.game_room.remove_player(self.user.id)
+                # 如果房間為空，可以考慮移除房間
+                if self.game_room.get_player_count() == 0:
+                    GameRoom.remove_room(self.room_name)
+            
+            # 移除離開的玩家（包括訪客）
+            await self.remove_player_from_room() # This uses self.user internally
+            
+            # 通知其他用戶有人離開
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'user_notification',
+                    'message': f'{username_to_display} 已離開遊戲',
+                    'username': "系統"
+                }
+            )
+            
+            # 更新房間玩家列表
+            players = await self.get_room_players()
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'room_info',
+                    'players': players,
+                    'room': self.room_name
+                }
+            )
+        else:
+            # User was not fully connected, so don't send "未知用戶 已離開遊戲"
+            # You might want to log this for debugging if it happens unexpectedly
+            print(f"Disconnected a client that was not fully identified. Room: {self.room_name}, User scope: {self.user}")
+
+        # 離開房間群組 (always do this to clean up channel layers)
+        if hasattr(self, 'room_group_name') and hasattr(self, 'channel_name'):
+             await self.channel_layer.group_discard(
+                self.room_group_name,
+                self.channel_name
+            )
 
     async def receive(self, text_data):
         try:
