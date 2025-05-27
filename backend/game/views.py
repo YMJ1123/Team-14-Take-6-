@@ -10,6 +10,7 @@ from .game_room import GameRoom, active_rooms
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from django.db.models import Count, OuterRef, Subquery, IntegerField
 
 def home(request):
     return HttpResponse("Welcome to Take 6! Online Game API")
@@ -17,8 +18,17 @@ def home(request):
 @api_view(['GET', 'POST'])
 def room_list(request):
     if request.method == 'GET':
-        rooms = Room.objects.all().order_by('-created_at')
-        serializer = RoomSerializer(rooms, many=True)
+        # Subquery to get the count of active players in the active game session for each room
+        active_game_session_players = Player.objects.filter(
+            game__room=OuterRef('pk'),
+            game__active=True
+        ).values('game__room').annotate(c=Count('id')).values('c')
+
+        rooms = Room.objects.filter(active=True).annotate(
+            player_count_db=Subquery(active_game_session_players, output_field=IntegerField())
+        ).order_by('-created_at')
+        
+        serializer = RoomSerializer(rooms, many=True, context={'request': request, 'active_rooms': active_rooms})
         return Response(serializer.data)
     elif request.method == 'POST':
         serializer = RoomSerializer(data=request.data)
@@ -47,11 +57,29 @@ class CsrfExemptSessionAuthentication(SessionAuthentication):
         return              # ← 直接跳過 CsrfViewMiddleware 的驗證
 
 class RoomViewSet(viewsets.ModelViewSet):
-    queryset = Room.objects.filter(active=True)
     serializer_class = RoomSerializer
     permission_classes = [permissions.AllowAny]
     authentication_classes = [CsrfExemptSessionAuthentication, BasicAuthentication]
-    
+
+    def get_queryset(self):
+        # Subquery to get the count of active players in the active game session for each room
+        active_game_session_players = Player.objects.filter(
+            game__room=OuterRef('pk'),
+            game__active=True
+        ).values('game__room').annotate(c=Count('id')).values('c')
+
+        queryset = Room.objects.filter(active=True).annotate(
+            player_count_db=Subquery(active_game_session_players, output_field=IntegerField())
+        ).order_by('-created_at')
+        
+        return queryset
+
+    def get_serializer_context(self):
+        # Pass active_rooms to the serializer context
+        context = super().get_serializer_context()
+        context['active_rooms'] = active_rooms
+        return context
+
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):
         room = self.get_object()
@@ -74,22 +102,19 @@ class RoomViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='player_count')
     def get_player_count(self, request, pk=None):
         """獲取指定房間的當前玩家數量"""
-        room = self.get_object()
+        room = self.get_object() # This will use the optimized get_queryset if called for detail view, but get_object() itself doesn't apply list annotations.
         room_name = room.name
         
-        # 檢查WebSocket活躍房間中是否有此房間
+        # Try active_rooms cache first
         if room_name in active_rooms:
-            player_count = active_rooms[room_name].get_player_count()
+            return Response({'player_count': active_rooms[room_name].get_player_count()})
+        
+        # Fallback to DB query for a single room (already efficient for one room)
+        game = GameSession.objects.filter(room=room, active=True).first()
+        if game:
+            player_count = Player.objects.filter(game=game).count()
         else:
-            # 如果在活躍房間中找不到，嘗試從數據庫獲取
-            try:
-                game = GameSession.objects.filter(room=room, active=True).first()
-                if game:
-                    player_count = Player.objects.filter(game=game).count()
-                else:
-                    player_count = 0
-            except Exception:
-                player_count = 0
+            player_count = 0
         
         return Response({'player_count': player_count})
 
