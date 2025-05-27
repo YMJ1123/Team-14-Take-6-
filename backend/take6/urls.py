@@ -21,7 +21,7 @@ from game.views import RoomViewSet, GameSessionViewSet, PlayerViewSet, home #, i
 from django.views.generic import TemplateView
 
 router = routers.DefaultRouter()
-router.register(r'rooms', RoomViewSet)
+router.register(r'rooms', RoomViewSet, basename='room')
 router.register(r'games', GameSessionViewSet)
 router.register(r'players', PlayerViewSet)
 
