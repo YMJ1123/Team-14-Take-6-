@@ -113,12 +113,17 @@ import dj_database_url
 DATABASES = {
     "default": dj_database_url.parse(
         os.environ["DATABASE_URL"], 
-        conn_max_age=600,
+        conn_max_age=600, # This might be overridden or complemented by POOL_OPTIONS['RECYCLE']
     )
 }
+# Update the engine and add pool options for django-db-connection-pool
+DATABASES['default']['ENGINE'] = 'dj_db_conn_pool.backends.postgresql'
+DATABASES['default']['POOL_OPTIONS'] = {
+    'POOL_SIZE': 5,
+    'MAX_OVERFLOW': 10,
+    'RECYCLE': 540,  # in seconds, should be less than conn_max_age
+}
 
-# 明确告诉 Django 不要用 SSL
-DATABASES["default"]["OPTIONS"] = {"sslmode": "disable"}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

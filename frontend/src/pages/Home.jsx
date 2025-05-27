@@ -41,7 +41,6 @@ const Home = () => {
       <RoomList />
       <CreateRoomForm />
       <AboutGame />
-      <ApiDocs />
     </div>
   );
 };

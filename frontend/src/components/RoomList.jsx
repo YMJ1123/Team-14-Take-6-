@@ -44,7 +44,7 @@ const RoomList = () => {
 
   useEffect(() => {
     fetchRooms();
-    const refreshInterval = setInterval(fetchRooms, 2000);
+    const refreshInterval = setInterval(fetchRooms, 20000);
     return () => clearInterval(refreshInterval);
   }, [fetchRooms]);
 
